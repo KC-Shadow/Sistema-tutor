@@ -11,6 +11,14 @@ const config = {
     
     backgroundColor: '#2c1a1a', 
 
+    // Escalado responsivo: ajusta el canvas a la vista manteniendo la relación de aspecto
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 800,
+        height: 600
+    },
+
     render: {
         pixelArt: true,      
         antialias: false,    
