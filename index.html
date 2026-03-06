@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circo Isósceles - Sistema de Tutoría Inteligente</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    
+    <script src="js/MenuScene.js"></script> 
+    <script src="js/PerfilScene.js"></script> 
+    
+    <script src="js/TaquillaScene.js"></script> 
+    
+    <script src="js/main.js"></script>
+    
+    <style>
+        body { 
+            margin: 0; 
+            background-color: #1a0f0f; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            overflow: hidden; 
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        #game-container { 
+            border: 6px solid #3d2622; 
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+
+        #perfil-container {
+            position: absolute;
+            background: rgba(44, 26, 26, 0.95);
+            padding: 20px;
+            border: 4px solid #7d4e46;
+            color: #d4a373;
+            border-radius: 10px;
+            display: none;
+            z-index: 10;
+        }
+
+        #perfil-form input, #perfil-form select {
+            background: #1a0f0f;
+            border: 1px solid #7d4e46;
+            color: #fff;
+            margin-bottom: 10px;
+            padding: 5px;
+            width: 100%;
+        }
+
+        #perfil-form input[type="submit"] {
+            background: #7d4e46;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+
+    <div id="perfil-container">
+        <h2 style="text-align: center; color: #7d4e46;">Registro de Jugador</h2>
+        <div id="perfil-form-content"></div>
+    </div>
+</body>
+</html>
