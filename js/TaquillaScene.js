@@ -133,8 +133,11 @@ class TaquillaScene extends Phaser.Scene {
         this.txtPepe.setText(dialogos[pasoActual]);
 
         // Reproducir primer audio
-        this.audioTutorial = this.sound.add('audio_pepe_1');
+        this.audioTutorial = this.sound.add('audio_pepe_1', { volume: 3.0 });
         this.audioTutorial.play();
+
+        // Bajar volumen de música de fondo durante el tutorial
+        if (this.musica) this.musica.setVolume(0.1);
 
         // Botón de saltar
         const btnSaltar = this.add.text(200, 290, 'SALTAR >>', { 
@@ -143,6 +146,10 @@ class TaquillaScene extends Phaser.Scene {
 
         const finalizarTutorial = () => {
             if (this.audioTutorial) this.audioTutorial.stop();
+
+            // Restaurar volumen de música de fondo
+            if (this.musica) this.musica.setVolume(0.5);
+
             this.input.off('pointerdown', avanzarDialogo);
             btnSaltar.destroy();
             this.tweens.add({
@@ -167,7 +174,7 @@ class TaquillaScene extends Phaser.Scene {
             pasoActual++;
             if (pasoActual < dialogos.length) {
                 this.txtPepe.setText(dialogos[pasoActual]);
-                this.audioTutorial = this.sound.add(`audio_pepe_${pasoActual + 1}`);
+                this.audioTutorial = this.sound.add(`audio_pepe_${pasoActual + 1}`, { volume: 3.0 });
                 this.audioTutorial.play();
             } else {
                 finalizarTutorial();
