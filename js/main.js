@@ -25,7 +25,7 @@ const config = {
         roundPixels: true
     },
 
-    scene: [MenuScene, TaquillaScene, PerfilScene],
+    scene: [MenuScene, TaquillaScene, PerfilScene, DagasScene],
 
     // Física Arcade ligera
     physics: {
@@ -43,3 +43,21 @@ const config = {
 
 // Inicialización del motor
 const game = new Phaser.Game(config);
+
+const style = document.createElement('style');
+style.innerHTML = `
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #2c1a1a; 
+        overflow: hidden; 
+    }
+    #game-container {
+        width: 100%;
+        height: 100%;
+        touch-action: none; 
+    }
+`;
+document.head.appendChild(style);

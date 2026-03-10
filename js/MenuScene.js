@@ -15,11 +15,13 @@ class MenuScene extends Phaser.Scene {
         this.load.image('carpa_pepe_2', 'assets/menu/carpa_pepe_2.png');
         this.load.image('carpa_perfil', 'assets/menu/carpa_perfil.png');
         this.load.image('carpa_perfil_2', 'assets/menu/carpa_perfil_2.png');
+        this.load.image('carpa_dante', 'assets/menu/carpa_dante.png');
         
         // Carteles
         this.load.image('cartel_isosceles', 'assets/menu/cartel_isosceles.png');
         this.load.image('cartel_pepe', 'assets/menu/cartel_pepe.png');
         this.load.image('cartel_perfil', 'assets/menu/cartel_perfil.png');
+        this.load.image('cartel_dante', 'assets/menu/cartel_dante.png');
 
         // Tutor Mr Claw
         this.load.image('mr_claw', 'assets/personajes_principales/mr_claw.png');
@@ -39,19 +41,19 @@ class MenuScene extends Phaser.Scene {
         this.add.image(400, 300, 'fondo_menu').setDisplaySize(800, 600);
 
         // Cartel Isosceles
-        this.add.image(20, 580, 'cartel_isosceles').setOrigin(0, 1).setScale(0.4);
+        this.add.image(20, 580, 'cartel_isosceles').setOrigin(0, 1);
 
         // Reproducir musica
         this.musica = this.sound.add('musica_menu', { loop: true, volume: 0.5 });
         this.musica.play();
 
         // Carpa para "La Taquilla de Pepe"
-        this.carpaPepe = this.add.image(185, 375, 'carpa_pepe').setInteractive({ useHandCursor: true });
+        this.carpaPepe = this.add.image(165, 335, 'carpa_pepe').setInteractive({ useHandCursor: true });
         this.carpaPepe.on('pointerdown', () => {
             this.musica.stop();
             this.scene.start('TaquillaScene'); // Cambiar a la escena del juego de Pepe
-        }).setScale(0.1);
-        this.add.image(25, 400, 'cartel_pepe').setOrigin(0, 1).setScale(0.25);
+        }).setScale(0.75);
+        this.add.image(5, 375, 'cartel_pepe').setOrigin(0, 1).setScale(1);
 
         // Animación: Alternar entre carpa_pepe y carpa_pepe_2 cada 500ms
         /*this.time.addEvent({
@@ -68,8 +70,8 @@ class MenuScene extends Phaser.Scene {
         this.carpaPerfil.on('pointerdown', () => {
             this.musica.stop();
             this.scene.start('PerfilScene'); // Cambiar a la escena de Perfil
-        }).setScale(0.25);
-        this.add.image(500, 300, 'cartel_perfil').setOrigin(0, 1).setScale(0.25);
+        }).setScale(1);
+        this.add.image(500, 300, 'cartel_perfil').setOrigin(0, 1).setScale(1);
 
         // Animación: Alternar entre carpa_perfil y carpa_perfil_2 cada 500ms
         /*this.time.addEvent({
@@ -80,6 +82,15 @@ class MenuScene extends Phaser.Scene {
             },
             loop: true
         });*/
+
+        //Carpa para "Dagas al aire"
+        this.carpaDante = this.add.image(450, 350, 'carpa_dante').setScale(1);
+        this.carpaDante.setInteractive({ useHandCursor: true });
+        this.carpaDante.on('pointerdown', () => {
+            this.musica.stop();
+            this.scene.start('DagasScene');
+        });
+        this.add.image(300, 400, 'cartel_dante').setOrigin(0, 1).setScale(1);
 
         // Mr Claw y Dialogo de Bienvenida
         this.mrClaw = this.add.image(780, 580, 'mr_claw').setOrigin(1, 1).setScale(0.4);
@@ -92,6 +103,14 @@ class MenuScene extends Phaser.Scene {
     }
 
     iniciarTutorial() {
+        // Desactivar interacción con las carpas durante el tutorial
+        this.carpaPepe.disableInteractive();
+        this.carpaPerfil.disableInteractive();
+        this.carpaDante.disableInteractive();
+
+        // Bajar volumen de la música durante el tutorial
+        if (this.musica) this.musica.setVolume(0.1);
+
         const frases = [
             "¡Bienvenido al Circo Isósceles!",
             "Soy Mr. Claw, el dueño de este lugar.",
@@ -112,10 +131,19 @@ class MenuScene extends Phaser.Scene {
 
         const finalizar = () => {
             if (this.audioTutorial) this.audioTutorial.stop();
+
+            // Restaurar volumen de la música
+            if (this.musica) this.musica.setVolume(0.5);
+
             this.nubeClaw.setVisible(false);
             this.txtClaw.setVisible(false);
             btnSaltar.destroy();
             this.input.off('pointerdown', avanzar);
+
+            // Reactivar interacción con las carpas
+            this.carpaPepe.setInteractive({ useHandCursor: true });
+            this.carpaPerfil.setInteractive({ useHandCursor: true });
+            this.carpaDante.setInteractive({ useHandCursor: true });
         };
 
         const avanzar = () => {
