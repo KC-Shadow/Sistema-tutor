@@ -14,6 +14,7 @@ class DagasScene extends Phaser.Scene {
         // UI
         this.load.image('diana', 'assets/dagas/ui/diana.png');
         this.load.image('fondo_dagas', 'assets/dagas/ui/fondo_dagas.jpg ');
+        this.load.image('impacto', 'assets/extra/impacto.png');
         
         // Cartelera
         this.load.image('cartelera', 'assets/extra/cartelera.png');
@@ -36,6 +37,13 @@ class DagasScene extends Phaser.Scene {
         this.load.image('n_002', 'assets/extra/n_002.png');
         this.load.image('n_001', 'assets/extra/n_001.png');
         this.load.audio('cuenta_regresiva', 'assets/music/cuenta_regresiva.mp3');
+        this.load.audio('musica_dagas', 'assets/music/circus_game2.mp3');
+
+        // Audios Tutorial Dante
+        for (let i = 1; i <= 5; i++) {
+            let numStr = i.toString().padStart(3, '0');
+            this.load.audio(`audio_dante_${numStr}`, `assets/audios_tutor/audios_dante/audio_${numStr}.mp3`);
+        }
     }
 
     init() {
@@ -61,40 +69,46 @@ class DagasScene extends Phaser.Scene {
 
         this.add.image(400, 300, 'fondo_dagas').setDisplaySize(800, 600);
 
+        // Musica de fondo (Volumen bajo inicial por el tutorial)
+        this.musica = this.sound.add('musica_dagas', { loop: true, volume: 0.1 });
+        this.musica.play();
+
         // Entorno Visual
         this.diana = this.add.image(400, 300, 'diana').setScale(0.8);
-        this.cartelera = this.add.image(680, 100, 'cartelera').setScale(0.7);
+        this.cartelera = this.add.image(680, 100, 'cartelera').setScale(0.50);
 
         // Dante y su Diálogo
-        this.dante = this.add.image(150, 480, 'dante').setScale(0.7);
-        this.dialogo = this.add.image(220, 370, 'dialogo').setScale(0.6).setVisible(false);
+        this.dante = this.add.image(100, 500, 'dante').setScale(0.7);
+        this.dialogo = this.add.image(200, 390, 'dialogo').setScale(0.75).setVisible(false);
 
         // Grupo de Globos
         this.globosGroup = this.physics.add.group();
 
         // UI 
-        this.txtMultiplicacion = this.add.text(220, 370, '', { 
-            fontFamily: 'Courier New', fontSize: '26px', fill: 'rgb(0, 0, 0)', fontStyle: 'bold', align: 'center', wordWrap: { width: 130 } }).setOrigin(0.5);
+        this.txtMultiplicacion = this.add.text(200, 370, '', { 
+            fontFamily: 'Courier New', fontSize: '26px', fill: 'rgb(0, 0, 0)', fontStyle: 'bold', align: 'center', wordWrap: { width: 180 } }).setOrigin(0.5);
         this.txtMultiplicacion.setVisible(false);
 
         // Texto para el Tutorial
-        this.txtTutorial = this.add.text(220, 370, '', { 
-            fontFamily: 'Courier New', fontSize: '16px', fill: '#000', align: 'center', wordWrap: { width: 160 } 
+        this.txtTutorial = this.add.text(200, 370, '', { 
+            fontFamily: 'Courier New', fontSize: '16px', fill: '#000', align: 'center', wordWrap: { width: 180 } 
         }).setOrigin(0.5).setVisible(false);
 
         // Temporizador Global
-        this.txtTiempoJuego = this.add.text(680, 80, 'Tiempo: 120s', { fontFamily: 'Playbill', fontSize: '30px', fill: '#fff' }).setOrigin(0.5).setAngle(-9);
+        this.txtTiempoJuego = this.add.text(680, 90, 'Tiempo: 120s', { fontFamily: 'Playbill', fontSize: '50px', fill: '#000000' }).setOrigin(0.5).setAngle(-9);
         
         // Temporizador de Ronda
-        this.txtTiempoRonda = this.add.text(680, 115, 'Ronda: 10s', { fontFamily: 'Playbill', fontSize: '26px', fill: '#f00', fontStyle: 'bold' }).setOrigin(0.5).setAngle(-9);
+        this.txtTiempoRonda = this.add.text(680, 125, 'Ronda: 10s', { fontFamily: 'Playbill', fontSize: '44px', fill: '#000000'}).setOrigin(0.5).setAngle(-9);
 
         // Marcador de Puntuación
-        this.txtPuntuacion = this.add.text(680, 150, 'Puntos: 0', { fontFamily: 'Playbill', fontSize: '28px', fill: '#d4a373' }).setOrigin(0.5).setAngle(-9);
+        this.txtPuntuacion = this.add.text(680, 160, 'Puntos: 0', { fontFamily: 'Playbill', fontSize: '48px', fill: '#000000' }).setOrigin(0.5).setAngle(-9);
 
         // Botón para volver al menú principal (esquina inferior derecha)
         this.btnVolver = this.add.text(780, 580, 'Volver', { fontFamily: 'Courier New', fontSize: '18px', fill: '#fff', backgroundColor: '#3d2622', padding: { x: 10, y: 5 } }).setOrigin(1, 1).setInteractive({ useHandCursor: true });
         this.btnVolver.on('pointerdown', () => {
             this.pararTodosLosTemporizadores();
+            this.sound.stopAll();
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
             this.scene.start('MenuScene'); // Detiene DanteScene y vuelve al menú
         });
 
@@ -104,6 +118,9 @@ class DagasScene extends Phaser.Scene {
     iniciarTutorial() {
         this.dialogo.setVisible(true);
         this.txtTutorial.setVisible(true);
+
+        // Asegurar volumen bajo durante el tutorial
+        if (this.musica) this.musica.setVolume(0.1);
 
         const frases = [
             "¡Hola! Soy Dante. Bienvenido al reto de 'Dagas en el Aire'.",
@@ -115,6 +132,23 @@ class DagasScene extends Phaser.Scene {
 
         let paso = 0;
         this.txtTutorial.setText(frases[paso]);
+        
+        // Reproducir primer audio
+        let numStr = (paso + 1).toString().padStart(3, '0');
+        this.audioTutorial = this.sound.add(`audio_dante_${numStr}`);
+        this.audioTutorial.play();
+
+        // Animación de hablar
+        const darBrinco = () => {
+            this.dante.y = 500;
+            this.tweenDante = this.tweens.add({
+                targets: this.dante,
+                y: 490,
+                duration: 150,
+                yoyo: true
+            });
+        };
+        darBrinco();
 
         // Botón Saltar
         const btnSaltar = this.add.text(400, 550, 'SALTAR >>', { 
@@ -122,6 +156,17 @@ class DagasScene extends Phaser.Scene {
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         const finalizarTutorial = () => {
+            if (this.audioTutorial) this.audioTutorial.stop();
+            
+            // Restaurar volumen de la música al finalizar tutorial
+            if (this.musica) this.musica.setVolume(0.5);
+
+            // Detener animación de hablar
+            if (this.tweenDante) {
+                this.tweenDante.stop();
+                this.dante.y = 500;
+            }
+            
             this.input.off('pointerdown', avanzar);
             btnSaltar.destroy();
             this.txtTutorial.setVisible(false);
@@ -130,9 +175,14 @@ class DagasScene extends Phaser.Scene {
         };
 
         const avanzar = () => {
+            if (this.audioTutorial) this.audioTutorial.stop();
             paso++;
             if (paso < frases.length) {
                 this.txtTutorial.setText(frases[paso]);
+                let numStr = (paso + 1).toString().padStart(3, '0');
+                this.audioTutorial = this.sound.add(`audio_dante_${numStr}`);
+                this.audioTutorial.play();
+                darBrinco();
             } else {
                 finalizarTutorial();
             }
@@ -227,6 +277,19 @@ class DagasScene extends Phaser.Scene {
         this.txtMultiplicacion.setText(`${this.multiplicacionActual.a} x ${this.multiplicacionActual.b} = ?`);
         this.txtMultiplicacion.setVisible(true);
 
+        // Reproducir la multiplicación en audio
+        if (window.speechSynthesis) {
+            if (this.musica) this.musica.setVolume(0.1); // Bajar volumen al hablar
+            window.speechSynthesis.cancel();
+            const texto = `¿Cuánto es ${this.multiplicacionActual.a} por ${this.multiplicacionActual.b}?`;
+            this.voz = new SpeechSynthesisUtterance(texto);
+            this.voz.lang = 'es-ES';
+            this.voz.onend = () => {
+                if (this.musica && this.juegoActivo) this.musica.setVolume(0.5); // Restaurar al terminar
+            };
+            window.speechSynthesis.speak(this.voz);
+        }
+
         // Crear un grupo de globos sobre la diana (uno correcto, varios incorrectos)
         this.crearGlobos();
 
@@ -264,7 +327,7 @@ class DagasScene extends Phaser.Scene {
 
             while (!posicionValida && intentos < 50) {
                 let angulo = Phaser.Math.FloatBetween(0, Math.PI * 2);
-                let radio = Phaser.Math.Between(80, 160); // Distribución radial, ajustado para no salirse de la diana
+                let radio = Phaser.Math.Between(40, 120); // Distribución radial, ajustado para no salirse de la diana
                 x = 400 + Math.cos(angulo) * radio;
                 y = 300 + Math.sin(angulo) * radio;
 
@@ -298,18 +361,22 @@ class DagasScene extends Phaser.Scene {
     lanzarDaga(globoObjetivo) {
         if (!this.juegoActivo || !this.rondaActiva) return; // No lanzar si el tiempo acabó o la ronda paró
 
-        // 1. Ocultar la multiplicación temporalmente durante el lanzamiento
+        // Ocultar la multiplicación temporalmente durante el lanzamiento
         this.txtMultiplicacion.setVisible(false);
         this.dialogo.setVisible(false);
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel(); // Detener voz al actuar
+            if (this.musica) this.musica.setVolume(0.5); // Restaurar música si se interrumpió la voz
+        }
 
-        // 2. Crear la daga visualmente (ej: d_001) desde la posición de Dante
+        // Crear la daga visualmente desde la posición de Dante
         let daga = this.physics.add.sprite(this.dante.x + 60, this.dante.y - 20, 'daga_001').setScale(0.5);
-        daga.setAngle(-45); // Ángulo visual de lanzamiento
+        daga.setAngularVelocity(800); 
 
-        // 3. Mover la daga hacia el globo objetivo con físicas
+        // Mover la daga hacia el globo objetivo con físicas
         this.physics.moveToObject(daga, globoObjetivo, 700); // Velocidad 700
 
-        // 4. Configurar colisión (overlap) entre la daga y el globo
+        // Configurar colisión (overlap) entre la daga y el globo
         this.physics.add.overlap(daga, globoObjetivo, () => {
             this.verificarAcierto(globoObjetivo);
             daga.destroy(); // La daga desaparece al impactar
@@ -326,15 +393,27 @@ class DagasScene extends Phaser.Scene {
         // Recuperar el valor oculto del globo impactado
         let valorGlobo = globoImpactado.getData('valor');
 
-        if (valorGlobo === this.multiplicacionActual.producto) {
-            // --- ACIERTO ---
+        if (valorGlobo === this.multiplicacionActual.producto) { 
             this.puntuacion += 10; // Sumar puntos por acierto
             this.txtPuntuacion.setText(`Puntos: ${this.puntuacion}`);
             this.txtTiempoRonda.setText('¡CORRECTO!');
             this.txtTiempoRonda.setColor('#0f0'); // Verde brillante (Coherente con Pepe)
 
+            // Guardar posición del globo antes de destruirlo
+            const x = globoImpactado.x;
+            const y = globoImpactado.y;
+
             // Efecto visual: Reventar el globo (puedes añadir partículas aquí)
             globoImpactado.destroy();
+
+            // Mostrar imagen de impacto y desvanecerla
+            const imgImpacto = this.add.image(x, y, 'impacto').setScale(0.3);
+            this.tweens.add({
+                targets: imgImpacto,
+                alpha: 0,
+                duration: 500,
+                onComplete: () => imgImpacto.destroy()
+            });
 
             // Esperar 1.5 segundos mostrando el acierto y pasar a la siguiente multiplicación
             this.time.delayedCall(1500, this.prepararSiguienteRonda, [], this);
@@ -355,6 +434,11 @@ class DagasScene extends Phaser.Scene {
     finDeTiempoRonda() {
         if (!this.juegoActivo || !this.rondaActiva) return;
         this.rondaActiva = false; // Detener la ronda por tiempo agotado
+
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            if (this.musica) this.musica.setVolume(0.5);
+        }
 
         this.txtTiempoRonda.setText('¡TIEMPO AGOTADO!');
         this.txtTiempoRonda.setColor('#f00'); // Rojo
@@ -395,6 +479,20 @@ class DagasScene extends Phaser.Scene {
         this.rondaActiva = true;
         this.dialogo.setVisible(true);
         this.txtMultiplicacion.setVisible(true);
+
+        // Repetir audio de la multiplicación al reiniciar
+        if (window.speechSynthesis) {
+            if (this.musica) this.musica.setVolume(0.1);
+            window.speechSynthesis.cancel();
+            const texto = `¿Cuánto es ${this.multiplicacionActual.a} por ${this.multiplicacionActual.b}?`;
+            this.voz = new SpeechSynthesisUtterance(texto);
+            this.voz.lang = 'es-ES';
+            this.voz.onend = () => {
+                if (this.musica && this.juegoActivo) this.musica.setVolume(0.5);
+            };
+            window.speechSynthesis.speak(this.voz);
+        }
+
         // Reiniciar el temporizador de 10s
         this.temporizadorRonda = this.time.delayedCall(this.tiempoLimiteRonda * 1000, this.finDeTiempoRonda, [], this);
     }
@@ -402,6 +500,7 @@ class DagasScene extends Phaser.Scene {
     finDelJuego() {
         this.juegoActivo = false;
         this.pararTodosLosTemporizadores();
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
 
         // Ocultar elementos de juego
         this.dialogo.setVisible(false);
@@ -409,8 +508,7 @@ class DagasScene extends Phaser.Scene {
         this.globosGroup.clear(true, true);
         this.txtTiempoRonda.setVisible(false);
 
-        // === PANTALLA DE RESULTADOS ===
-        // Fondo oscuro semitransparente
+        // PANTALLA DE RESULTADOS 
         this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8).setOrigin(0.5);
 
         this.add.text(400, 250, '¡FIN DEL JUEGO!', { fontFamily: 'Courier New', fontSize: '56px', fill: '#f00', fontStyle: 'bold' }).setOrigin(0.5);
@@ -420,6 +518,7 @@ class DagasScene extends Phaser.Scene {
         this.btnVolver.setVisible(false);
         this.btnFinJuego = this.add.text(400, 480, 'Volver al Menú', { fontFamily: 'Courier New', fontSize: '24px', fill: '#fff', backgroundColor: '#3d2622', padding: 10 }).setInteractive({ useHandCursor: true });
         this.btnFinJuego.on('pointerdown', () => {
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
             this.scene.start('MenuScene');
         });
     }

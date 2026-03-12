@@ -152,6 +152,18 @@ class TaquillaScene extends Phaser.Scene {
         this.audioTutorial = this.sound.add('audio_pepe_1', { volume: 1.0 });
         this.audioTutorial.play();
 
+        // Animación de hablar (un solo brinco)
+        const darBrinco = () => {
+            this.pepe.y = 500;
+            this.tweenPepe = this.tweens.add({
+                targets: this.pepe,
+                y: 490,
+                duration: 150,
+                yoyo: true
+            });
+        };
+        darBrinco();
+
         // Bajar volumen de música de fondo durante el tutorial
         if (this.musica) this.musica.setVolume(0.05);
 
@@ -162,6 +174,12 @@ class TaquillaScene extends Phaser.Scene {
 
         const finalizarTutorial = () => {
             if (this.audioTutorial) this.audioTutorial.stop();
+
+            // Detener animación de hablar
+            if (this.tweenPepe) {
+                this.tweenPepe.stop();
+                this.pepe.y = 500;
+            }
 
             // Restaurar volumen de música de fondo
             if (this.musica) this.musica.setVolume(0.1);
@@ -192,6 +210,7 @@ class TaquillaScene extends Phaser.Scene {
                 this.txtPepe.setText(dialogos[pasoActual]);
                 this.audioTutorial = this.sound.add(`audio_pepe_${pasoActual + 1}`, { volume: 1.0 });
                 this.audioTutorial.play();
+                darBrinco();
             } else {
                 finalizarTutorial();
             }
@@ -245,9 +264,22 @@ class TaquillaScene extends Phaser.Scene {
 
         this.montoTotal = (ninos * 3) + (adultos * 7);
         
-        // El cliente paga con el billete/monto superior más cercano
-        this.pagoCliente = Math.ceil(this.montoTotal / 10) * 10;
-        if (this.pagoCliente === this.montoTotal) this.pagoCliente += 10;
+        // Determinar pago del cliente
+        const tipoPago = Phaser.Math.Between(1, 3);
+        if (tipoPago === 1) {
+            this.pagoCliente = this.montoTotal; // Pago exacto
+        } else if (tipoPago === 2) {
+            // Intenta redondear al siguiente 5
+            this.pagoCliente = Math.ceil(this.montoTotal / 5) * 5;
+            // Si ya es exacto (ej: 25), intenta subir al siguiente 10 (30) para dar vuelto, pero no si es 30
+            if (this.pagoCliente === this.montoTotal && this.montoTotal % 10 !== 0) {
+                this.pagoCliente = Math.ceil(this.montoTotal / 10) * 10;
+            }
+        } else {
+            // Redondear al siguiente 10
+            this.pagoCliente = Math.ceil(this.montoTotal / 10) * 10;
+        }
+        
         this.vueltoCorrecto = this.pagoCliente - this.montoTotal;
 
         this.txtPantalla.setText(`TOTAL: ${this.montoTotal}.00\nVUELTO: 0.00`);
@@ -286,16 +318,29 @@ class TaquillaScene extends Phaser.Scene {
     }
 
     mostrarPagoEnMostrador(monto) {
-        let x = 250;
+        let monedas = [];
         let temp = monto;
         while(temp > 0) {
             let valor = temp >= 10 ? 10 : (temp >= 5 ? 5 : 1);
-            let escala = (valor === 10) ? 0.020 : 0.015;
-            let moneda = this.add.image(x, 420, `c${valor}`).setScale(escala);
-            this.grupoPagoMostrador.add(moneda);
+            monedas.push(valor);
             temp -= valor;
-            x += 45;
         }
+
+        const tamanoMoneda = 50; 
+        const limiteIzquierdo = 220; // Inicio en el escritorio
+        const limiteDerecho = 480;   // Límite antes de tocar la registradora
+        
+        let paso = 55;
+        if (limiteIzquierdo + (monedas.length * paso) > limiteDerecho) {
+            paso = (limiteDerecho - limiteIzquierdo - tamanoMoneda) / Math.max(1, monedas.length - 1);
+        }
+
+        let x = limiteIzquierdo;
+        monedas.forEach(valor => {
+            let moneda = this.add.image(x, 430, `c${valor}`).setDisplaySize(tamanoMoneda, tamanoMoneda);
+            this.grupoPagoMostrador.add(moneda);
+            x += paso;
+        });
     }
 
     crearMonedasEnCaja() {

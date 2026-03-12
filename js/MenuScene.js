@@ -124,6 +124,18 @@ class MenuScene extends Phaser.Scene {
         this.audioTutorial = this.sound.add('audio_claw_1');
         this.audioTutorial.play();
 
+        // Animación de hablar (un solo brinco)
+        const darBrinco = () => {
+            this.mrClaw.y = 580;
+            this.tweenClaw = this.tweens.add({
+                targets: this.mrClaw,
+                y: 570,
+                duration: 150,
+                yoyo: true
+            });
+        };
+        darBrinco();
+
         // Botón Saltar
         const btnSaltar = this.add.text(615, 340, 'SALTAR >>', { 
             fontFamily: 'Courier New', fontSize: '12px', fill: '#333', fontWeight: 'bold' 
@@ -131,6 +143,12 @@ class MenuScene extends Phaser.Scene {
 
         const finalizar = () => {
             if (this.audioTutorial) this.audioTutorial.stop();
+
+            // Detener animación de hablar
+            if (this.tweenClaw) {
+                this.tweenClaw.stop();
+                this.mrClaw.y = 580;
+            }
 
             // Restaurar volumen de la música
             if (this.musica) this.musica.setVolume(0.5);
@@ -153,6 +171,7 @@ class MenuScene extends Phaser.Scene {
                 this.txtClaw.setText(frases[paso]);
                 this.audioTutorial = this.sound.add(`audio_claw_${paso + 1}`);
                 this.audioTutorial.play();
+                darBrinco();
             } else {
                 finalizar();
             }
