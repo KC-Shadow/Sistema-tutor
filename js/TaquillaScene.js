@@ -137,12 +137,12 @@ class TaquillaScene extends Phaser.Scene {
     iniciarTutorial() {
         // Secuencia de diálogos del tutorial
         const dialogos = [
-            'PEPE: "¡Hola! Soy Pepe. Bienvenido a la taquilla. Tu misión es vender entradas para el circo."',
-            'PEPE: "Las tarifas son: 3 Bs para los NIÑOS y 7 Bs para los ADULTOS. ¡Memorízalo bien!"',
-            'PEPE: "Calcula el total y mira cuánto paga el cliente. Si sobra dinero, debes dar VUELTO."',
-            'PEPE: "Jala la PALANCA para abrir la caja y haz clic en las monedas para sumar el vuelto exacto."',
-            'PEPE: "Debes atender a 15 clientes. ¡Gana PUNTOS por cada venta correcta!"',
-            'PEPE: "Cuando termines, jala la PALANCA de nuevo para confirmar. (Haz clic para empezar)"'
+            '"¡Hola! Soy Pepe. Bienvenido a la taquilla. Tu misión es vender entradas para el circo."',
+            '"Las tarifas son: 4 Bs para los NIÑOS y 7 Bs para los ADULTOS. ¡Memorízalo bien!"',
+            '"Calcula el total y mira cuánto paga el cliente. Si sobra dinero, debes dar VUELTO."',
+            '"Jala la PALANCA para abrir la caja y haz clic en las monedas para sumar el vuelto exacto."',
+            '"Debes atender a 15 clientes. ¡Gana PUNTOS por cada venta correcta!"',
+            '"Cuando termines, jala la PALANCA de nuevo para confirmar. (Haz clic para empezar)"'
         ];
 
         let pasoActual = 0;
@@ -241,12 +241,24 @@ class TaquillaScene extends Phaser.Scene {
         this.monedasVueltoContainer.setAlpha(0);
         this.grupoPagoMostrador.clear(true, true);
 
-        // Lógica de Doble Tarifa para evitar repeticiones
+        // Lógica de Doble Tarifa para evitar pago completo
+        const combinacionesEvitar = [
+            { n: 5, a: 0 },
+            { n: 4, a: 2 },
+            { n: 3, a: 4 },
+            { n: 2, a: 6 },
+            { n: 1, a: 8 },
+            { n: 10, a: 0 },
+            { n: 0, a: 10 }
+        ];
+
         let ninos, adultos;
+        let esInvalida = false;
         do {
             ninos = Phaser.Math.Between(0, 3);
             adultos = Phaser.Math.Between(1, 4);
-        } while (ninos === this.lastNinos && adultos === this.lastAdultos);
+            esInvalida = combinacionesEvitar.some(c => c.n === ninos && c.a === adultos);
+        } while ((ninos === this.lastNinos && adultos === this.lastAdultos) || esInvalida);
 
         this.lastNinos = ninos;
         this.lastAdultos = adultos;
@@ -262,22 +274,16 @@ class TaquillaScene extends Phaser.Scene {
         this.txtCliente.setText(msg).setAlpha(1);
         this.nubeCliente.setAlpha(1);
 
-        this.montoTotal = (ninos * 3) + (adultos * 7);
+        this.montoTotal = (ninos * 4) + (adultos * 7);
         
-        // Determinar pago del cliente
-        const tipoPago = Phaser.Math.Between(1, 3);
+        // Determinar pago del cliente (siempre mayor al monto total para asegurar vuelto)
+        const tipoPago = Phaser.Math.Between(1, 2);
         if (tipoPago === 1) {
-            this.pagoCliente = this.montoTotal; // Pago exacto
-        } else if (tipoPago === 2) {
-            // Intenta redondear al siguiente 5
-            this.pagoCliente = Math.ceil(this.montoTotal / 5) * 5;
-            // Si ya es exacto (ej: 25), intenta subir al siguiente 10 (30) para dar vuelto, pero no si es 30
-            if (this.pagoCliente === this.montoTotal && this.montoTotal % 10 !== 0) {
-                this.pagoCliente = Math.ceil(this.montoTotal / 10) * 10;
-            }
+            // Pago redondeado al siguiente múltiplo de 5 (estrictamente mayor)
+            this.pagoCliente = Math.ceil((this.montoTotal + 1) / 5) * 5;
         } else {
-            // Redondear al siguiente 10
-            this.pagoCliente = Math.ceil(this.montoTotal / 10) * 10;
+            // Pago redondeado al siguiente múltiplo de 10 (estrictamente mayor)
+            this.pagoCliente = Math.ceil((this.montoTotal + 1) / 10) * 10;
         }
         
         this.vueltoCorrecto = this.pagoCliente - this.montoTotal;
@@ -289,23 +295,23 @@ class TaquillaScene extends Phaser.Scene {
         const clienteSeleccionado = Phaser.Utils.Array.GetRandom(listaClientes);
         this.cliente.setTexture(`cliente_${clienteSeleccionado}`).setAlpha(1);
         
-        // --- TEXT-TO-SPEECH: El cliente dice el pedido ---
+        // TEXT-TO-SPEECH
         if (window.speechSynthesis) {
-            window.speechSynthesis.cancel(); // Detener cualquier voz anterior
+            window.speechSynthesis.cancel(); 
             const voz = new SpeechSynthesisUtterance(msg);
-            voz.volume = 1; // Volumen máximo para la voz
-            voz.lang = 'es-ES'; // Configurar idioma español
+            voz.volume = 1; 
+            voz.lang = 'es-ES'; 
 
-            // Ajustar tono (pitch) según el tipo de animal
+            // Ajustar tono 
             const animalesGraves = ['bufalo', 'hipopotamo', 'oso', 'morsa', 'cerdo', 'tejon'];
             const animalesAgudos = ['raton', 'conejo', 'pinguino', 'cisne', 'pavo', 'buho'];
 
             if (animalesGraves.includes(clienteSeleccionado)) {
-                voz.pitch = 0.6; // Voz grave
-                voz.rate = 0.9;  // Un poco más lento
+                voz.pitch = 0.6; 
+                voz.rate = 0.9; 
             } else if (animalesAgudos.includes(clienteSeleccionado)) {
-                voz.pitch = 1.4; // Voz aguda
-                voz.rate = 1.1;  // Un poco más rápido
+                voz.pitch = 1.4; 
+                voz.rate = 1.1; 
             }
             window.speechSynthesis.speak(voz);
         }
@@ -372,31 +378,31 @@ class TaquillaScene extends Phaser.Scene {
 
     validarOperacion() {
         this.sound.play('caja_registradora');
+        
+        this.palanca.setTexture('palanca');
+        this.palanca.y = 320;
+
         if (this.vueltoEntregado === this.vueltoCorrecto) {
-            this.palanca.setTexture('palanca');
-            this.palanca.y = 320;
             this.sound.play('ganar');
             this.puntos += 10;
             this.txtPuntos.setText('PUNTOS: ' + this.puntos);
-            
-            this.ventasRealizadas++;
-            this.txtVentas.setText(`CLIENTES: ${this.ventasRealizadas}/${this.maxVentas}`);
-
-            // Ocultar las monedas ANTES de que la caja se cierre visualmente
-            this.monedasVueltoContainer.setAlpha(0); 
-            this.grupoPagoMostrador.clear(true, true); 
-
-            if (this.ventasRealizadas >= this.maxVentas) {
-                this.time.delayedCall(1000, () => this.finDelJuego());
-            } else {
-                this.registradora.setTexture('reg_cerrada');
-                this.time.delayedCall(1000, () => this.nuevaVenta());
-            }
         } else {
             this.sound.play('error');
             this.cameras.main.shake(200, 0.01);
-            this.vueltoEntregado = 0;
-            this.txtPantalla.setText(`TOTAL: ${this.montoTotal}.00\nVUELTO: 0.00`);
+        }
+        
+        this.ventasRealizadas++;
+        this.txtVentas.setText(`CLIENTES: ${this.ventasRealizadas}/${this.maxVentas}`);
+
+        // Ocultar las monedas ANTES de que la caja se cierre visualmente
+        this.monedasVueltoContainer.setAlpha(0); 
+        this.grupoPagoMostrador.clear(true, true); 
+
+        if (this.ventasRealizadas >= this.maxVentas) {
+            this.time.delayedCall(1000, () => this.finDelJuego());
+        } else {
+            this.registradora.setTexture('reg_cerrada');
+            this.time.delayedCall(1000, () => this.nuevaVenta());
         }
     }
 

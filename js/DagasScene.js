@@ -53,15 +53,10 @@ class DagasScene extends Phaser.Scene {
         this.rondaActiva = false; // Controla si los 10s de la ronda están corriendo
         this.juegoActivo = false;  // Controla si los 120s del juego están corriendo
 
-        //Configuración de Tiempos 
-        this.tiempoTotalJuego = 120; 
-        this.tiempoRestanteJuego = this.tiempoTotalJuego;
-        this.tiempoLimiteRonda = 10;  
-
-        // Referencias a Objetos
+        this.preguntasRealizadas = 0;
+        this.maxPreguntas = 15;
+        
         this.globosGroup = null; // Grupo de físicas para gestionar colisiones
-        this.temporizadorJuego = null;
-        this.temporizadorRonda = null;
     }
 
     create() {
@@ -94,11 +89,11 @@ class DagasScene extends Phaser.Scene {
             fontFamily: 'Courier New', fontSize: '16px', fill: '#000', align: 'center', wordWrap: { width: 180 } 
         }).setOrigin(0.5).setVisible(false);
 
-        // Temporizador Global
-        this.txtTiempoJuego = this.add.text(680, 90, 'Tiempo: 120s', { fontFamily: 'Playbill', fontSize: '50px', fill: '#000000' }).setOrigin(0.5).setAngle(-9);
+        // Rondas
+        this.txtRondas = this.add.text(680, 90, 'RONDAS: 0/15', { fontFamily: 'Playbill', fontSize: '46px', fill: '#000000' }).setOrigin(0.5).setAngle(-9);
         
-        // Temporizador de Ronda
-        this.txtTiempoRonda = this.add.text(680, 125, 'Ronda: 10s', { fontFamily: 'Playbill', fontSize: '44px', fill: '#000000'}).setOrigin(0.5).setAngle(-9);
+        // Mensajes de Ronda
+        this.txtMensaje = this.add.text(680, 125, '', { fontFamily: 'Playbill', fontSize: '44px', fill: '#000000'}).setOrigin(0.5).setAngle(-9);
 
         // Marcador de Puntuación
         this.txtPuntuacion = this.add.text(680, 160, 'Puntos: 0', { fontFamily: 'Playbill', fontSize: '48px', fill: '#000000' }).setOrigin(0.5).setAngle(-9);
@@ -106,7 +101,6 @@ class DagasScene extends Phaser.Scene {
         // Botón para volver al menú principal (esquina inferior derecha)
         this.btnVolver = this.add.text(780, 580, 'Volver', { fontFamily: 'Courier New', fontSize: '18px', fill: '#fff', backgroundColor: '#3d2622', padding: { x: 10, y: 5 } }).setOrigin(1, 1).setInteractive({ useHandCursor: true });
         this.btnVolver.on('pointerdown', () => {
-            this.pararTodosLosTemporizadores();
             this.sound.stopAll();
             if (window.speechSynthesis) window.speechSynthesis.cancel();
             this.scene.start('MenuScene'); // Detiene DanteScene y vuelve al menú
@@ -127,7 +121,7 @@ class DagasScene extends Phaser.Scene {
             "Tu objetivo es reventar el globo que tenga la respuesta correcta.",
             "Yo te mostraré una multiplicación, ¡calcula rápido!",
             "Haz clic en el globo correcto para lanzar una daga.",
-            "Tienes 120 segundos para conseguir la mayor puntuación posible."
+            "Tendrás 15 rondas para conseguir la mayor puntuación posible."
         ];
 
         let paso = 0;
@@ -213,56 +207,26 @@ class DagasScene extends Phaser.Scene {
     comenzarJuego() {
         this.juegoActivo = true;
 
-        // Lógica de Temporizadores 
-        this.temporizadorJuego = this.time.addEvent({
-            delay: 1000,
-            callback: this.actualizarTiempoJuego,
-            callbackScope: this,
-            loop: true
-        });
-
         // Iniciar la primera ronda de multiplicación automáticamente
         this.iniciarNuevaRonda();
     }
 
     update() {
-        // Actualizar el temporizador visual de la ronda (10s) si está corriendo
-        if (this.rondaActiva && this.temporizadorRonda) {
-            let tiempoRestanteRonda = Math.ceil(this.temporizadorRonda.getRemainingSeconds());
-            this.txtTiempoRonda.setText(`Ronda: ${tiempoRestanteRonda}s`);
-            
-            // Efecto visual: parpadear en rojo si queda poco tiempo
-            if (tiempoRestanteRonda <= 3) {
-                this.txtTiempoRonda.setAlpha(this.time.now % 500 < 250 ? 0.5 : 1);
-            } else {
-                this.txtTiempoRonda.setAlpha(1);
-            }
-        }
-    }
-
-    actualizarTiempoJuego() {
-        if (!this.juegoActivo) return;
-
-        this.tiempoRestanteJuego--;
-        this.txtTiempoJuego.setText(`Tiempo: ${this.tiempoRestanteJuego}s`);
-
-        // Alerta visual de poco tiempo global
-        if (this.tiempoRestanteJuego <= 10) {
-            this.txtTiempoJuego.setColor('#f00');
-        }
-
-        if (this.tiempoRestanteJuego <= 0) {
-            this.finDelJuego();
-        }
     }
 
     iniciarNuevaRonda() {
         if (!this.juegoActivo || this.rondaActiva) return; // Evitar iniciar si el juego acabó
+        
+        if (this.preguntasRealizadas >= this.maxPreguntas) {
+            this.finDelJuego();
+            return;
+        }
+        
         this.rondaActiva = true;
-
-        // Restablecer estilos de UI de ronda
-        this.txtTiempoRonda.setColor('#f00');
-        this.txtTiempoRonda.setAlpha(1);
+        this.preguntasRealizadas++;
+        
+        this.txtRondas.setText(`RONDAS: ${this.preguntasRealizadas}/${this.maxPreguntas}`);
+        this.txtMensaje.setText('');
 
         // Limpiar ronda anterior (eliminar globos existentes)
         this.globosGroup.clear(true, true);
@@ -292,8 +256,6 @@ class DagasScene extends Phaser.Scene {
 
         // Crear un grupo de globos sobre la diana (uno correcto, varios incorrectos)
         this.crearGlobos();
-
-        this.temporizadorRonda = this.time.delayedCall(this.tiempoLimiteRonda * 1000, this.finDeTiempoRonda, [], this);
     }
 
     crearGlobos() {
@@ -387,17 +349,14 @@ class DagasScene extends Phaser.Scene {
         if (!this.juegoActivo || !this.rondaActiva) return;
         this.rondaActiva = false; // Detener la lógica de la ronda inmediatamente
 
-        // Detener el temporizador de 10s de la ronda
-        if (this.temporizadorRonda) this.temporizadorRonda.remove();
-
         // Recuperar el valor oculto del globo impactado
         let valorGlobo = globoImpactado.getData('valor');
 
         if (valorGlobo === this.multiplicacionActual.producto) { 
             this.puntuacion += 10; // Sumar puntos por acierto
             this.txtPuntuacion.setText(`Puntos: ${this.puntuacion}`);
-            this.txtTiempoRonda.setText('¡CORRECTO!');
-            this.txtTiempoRonda.setColor('#0f0'); // Verde brillante (Coherente con Pepe)
+            this.txtMensaje.setText('¡CORRECTO!');
+            this.txtMensaje.setColor('#0f0'); // Verde brillante (Coherente con Pepe)
 
             // Guardar posición del globo antes de destruirlo
             const x = globoImpactado.x;
@@ -419,94 +378,37 @@ class DagasScene extends Phaser.Scene {
             this.time.delayedCall(1500, this.prepararSiguienteRonda, [], this);
         } else {
             // --- FALLO (Globo Incorrecto) ---
-            this.txtTiempoRonda.setText('¡INCORRECTO!');
-            this.txtTiempoRonda.setColor('#f00'); // Rojo
+            this.txtMensaje.setText('¡INCORRECTO!');
+            this.txtMensaje.setColor('#f00'); // Rojo
 
             // Efecto visual: El globo se oscurece y la cámara vibra
             globoImpactado.setTint(0x444444); 
             this.cameras.main.shake(200, 0.01); // Agitar cámara suave
 
-            // Esperar 2 segundos y reiniciar el MISMO nivel de multiplicación
-            this.time.delayedCall(2000, this.prepararMismoNivel, [], this);
+            // Esperar 2 segundos y avanzar a la SIGUIENTE ronda de multiplicación
+            this.time.delayedCall(2000, this.prepararSiguienteRonda, [], this);
         }
-    }
-
-    finDeTiempoRonda() {
-        if (!this.juegoActivo || !this.rondaActiva) return;
-        this.rondaActiva = false; // Detener la ronda por tiempo agotado
-
-        if (window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-            if (this.musica) this.musica.setVolume(0.5);
-        }
-
-        this.txtTiempoRonda.setText('¡TIEMPO AGOTADO!');
-        this.txtTiempoRonda.setColor('#f00'); // Rojo
-        this.cameras.main.shake(400, 0.02); // Agitar cámara más fuerte
-
-        // Ocultar la multiplicación
-        this.txtMultiplicacion.setVisible(false);
-        this.dialogo.setVisible(false);
-
-        // Efecto visual: Oscurecer todos los globos como inactivos
-        this.globosGroup.getChildren().forEach(globo => globo.setTint(0x444444));
-
-        // Esperar 2.5 segundos y reiniciar el MISMO nivel
-        this.time.delayedCall(2500, this.prepararMismoNivel, [], this);
     }
 
     prepararSiguienteRonda() {
         if (!this.juegoActivo) return;
         // Ocultar UI de ronda anterior
-        this.txtTiempoRonda.setText('Ronda: 10s');
-        this.txtTiempoRonda.setColor('#f00');
+        this.txtMensaje.setText('');
         
         // Iniciar nueva ronda con nueva multiplicación
         this.iniciarNuevaRonda();
     }
 
-    prepararMismoNivel() {
-        if (!this.juegoActivo) return;
-        // Ocultar UI de ronda anterior
-        this.txtTiempoRonda.setText('Ronda: 10s');
-        this.txtTiempoRonda.setColor('#f00');
-        
-        // Limpiar y recrear globos para reiniciar el estado visual
-        this.globosGroup.clear(true, true);
-        this.crearGlobos();
-
-        // Volver a mostrar globos y temporizador para la MISMA multiplicación
-        this.rondaActiva = true;
-        this.dialogo.setVisible(true);
-        this.txtMultiplicacion.setVisible(true);
-
-        // Repetir audio de la multiplicación al reiniciar
-        if (window.speechSynthesis) {
-            if (this.musica) this.musica.setVolume(0.1);
-            window.speechSynthesis.cancel();
-            const texto = `¿Cuánto es ${this.multiplicacionActual.a} por ${this.multiplicacionActual.b}?`;
-            this.voz = new SpeechSynthesisUtterance(texto);
-            this.voz.lang = 'es-ES';
-            this.voz.onend = () => {
-                if (this.musica && this.juegoActivo) this.musica.setVolume(0.5);
-            };
-            window.speechSynthesis.speak(this.voz);
-        }
-
-        // Reiniciar el temporizador de 10s
-        this.temporizadorRonda = this.time.delayedCall(this.tiempoLimiteRonda * 1000, this.finDeTiempoRonda, [], this);
-    }
-
     finDelJuego() {
         this.juegoActivo = false;
-        this.pararTodosLosTemporizadores();
         if (window.speechSynthesis) window.speechSynthesis.cancel();
 
         // Ocultar elementos de juego
         this.dialogo.setVisible(false);
         this.txtMultiplicacion.setVisible(false);
         this.globosGroup.clear(true, true);
-        this.txtTiempoRonda.setVisible(false);
+        this.txtMensaje.setVisible(false);
+        this.txtRondas.setVisible(false);
 
         // PANTALLA DE RESULTADOS 
         this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8).setOrigin(0.5);
@@ -518,13 +420,9 @@ class DagasScene extends Phaser.Scene {
         this.btnVolver.setVisible(false);
         this.btnFinJuego = this.add.text(400, 480, 'Volver al Menú', { fontFamily: 'Courier New', fontSize: '24px', fill: '#fff', backgroundColor: '#3d2622', padding: 10 }).setInteractive({ useHandCursor: true });
         this.btnFinJuego.on('pointerdown', () => {
+            this.sound.stopAll();
             if (window.speechSynthesis) window.speechSynthesis.cancel();
             this.scene.start('MenuScene');
         });
-    }
-
-    pararTodosLosTemporizadores() {
-        if (this.temporizadorJuego) this.temporizadorJuego.remove();
-        if (this.temporizadorRonda) this.temporizadorRonda.remove();
     }
 }
