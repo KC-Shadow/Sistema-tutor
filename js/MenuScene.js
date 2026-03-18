@@ -16,12 +16,16 @@ class MenuScene extends Phaser.Scene {
         this.load.image('carpa_perfil', 'assets/menu/carpa_perfil.png');
         this.load.image('carpa_perfil_2', 'assets/menu/carpa_perfil_2.png');
         this.load.image('carpa_dante', 'assets/menu/carpa_dante.png');
+        this.load.image('carpa_poligono', 'assets/menu/carpa_poligono.png')
         
         // Carteles
         this.load.image('cartel_isosceles', 'assets/menu/cartel_isosceles.png');
         this.load.image('cartel_pepe', 'assets/menu/cartel_pepe.png');
         this.load.image('cartel_perfil', 'assets/menu/cartel_perfil.png');
         this.load.image('cartel_dante', 'assets/menu/cartel_dante.png');
+        this.load.image('cartel_poligono', 'assets/menu/cartel_poligono.png');
+
+        // Personajes
 
         // Tutor Mr Claw
         this.load.image('mr_claw', 'assets/personajes_principales/mr_claw.png');
@@ -41,56 +45,45 @@ class MenuScene extends Phaser.Scene {
         this.add.image(400, 300, 'fondo_menu').setDisplaySize(800, 600);
 
         // Cartel Isosceles
-        this.add.image(20, 580, 'cartel_isosceles').setOrigin(0, 1);
+        this.add.image(-25, 625, 'cartel_isosceles').setOrigin(0, 1);
 
         // Reproducir musica
         this.musica = this.sound.add('musica_menu', { loop: true, volume: 0.5 });
         this.musica.play();
 
         // Carpa para "La Taquilla de Pepe"
-        this.carpaPepe = this.add.image(165, 335, 'carpa_pepe').setInteractive({ useHandCursor: true });
+        this.carpaPepe = this.add.image(135, 335, 'carpa_pepe').setInteractive({ useHandCursor: true });
         this.carpaPepe.on('pointerdown', () => {
             this.musica.stop();
             this.scene.start('TaquillaScene'); // Cambiar a la escena del juego de Pepe
         }).setScale(0.75);
-        this.add.image(5, 375, 'cartel_pepe').setOrigin(0, 1).setScale(1);
-
-        // Animación: Alternar entre carpa_pepe y carpa_pepe_2 cada 500ms
-        /*this.time.addEvent({
-            delay: 500,
-            callback: () => {
-                const nuevaTextura = (this.carpaPepe.texture.key === 'carpa_pepe') ? 'carpa_pepe_2' : 'carpa_pepe';
-                this.carpaPepe.setTexture(nuevaTextura);
-            },
-            loop: true
-        });*/
+        this.add.image(-25, 375, 'cartel_pepe').setOrigin(0, 1).setScale(1);
 
         // Carpa para el "Perfil del Jugador"
-        this.carpaPerfil = this.add.image(675, 250, 'carpa_perfil').setInteractive({ useHandCursor: true });
+        this.carpaPerfil = this.add.image(675, 225, 'carpa_perfil').setInteractive({ useHandCursor: true });
         this.carpaPerfil.on('pointerdown', () => {
             this.musica.stop();
             this.scene.start('PerfilScene'); // Cambiar a la escena de Perfil
         }).setScale(1);
-        this.add.image(500, 300, 'cartel_perfil').setOrigin(0, 1).setScale(1);
-
-        // Animación: Alternar entre carpa_perfil y carpa_perfil_2 cada 500ms
-        /*this.time.addEvent({
-            delay: 500,
-            callback: () => {
-                const nuevaTextura = (this.carpaPerfil.texture.key === 'carpa_perfil') ? 'carpa_perfil_2' : 'carpa_perfil';
-                this.carpaPerfil.setTexture(nuevaTextura);
-            },
-            loop: true
-        });*/
+        this.add.image(675, 275, 'cartel_perfil').setOrigin(0.5, 1).setScale(1);
 
         //Carpa para "Dagas al aire"
-        this.carpaDante = this.add.image(450, 350, 'carpa_dante').setScale(1);
+        this.carpaDante = this.add.image(505, 350, 'carpa_dante').setScale(1);
         this.carpaDante.setInteractive({ useHandCursor: true });
         this.carpaDante.on('pointerdown', () => {
             this.musica.stop();
             this.scene.start('DagasScene');
         });
-        this.add.image(300, 400, 'cartel_dante').setOrigin(0, 1).setScale(1);
+        this.add.image(505, 400, 'cartel_dante').setOrigin(0.5, 1).setScale(1);
+
+        // Carpa para "El poligono de Diana"
+        this.carpaPoligono = this.add.image(320, 400, 'carpa_poligono').setScale(1);
+        this.carpaPoligono.setInteractive({ useHandCursor: true });
+        this.carpaPoligono.on('pointerdown', () => {
+            this.musica.stop();
+            this.scene.start('PoligonoScene');
+        });
+       this.add.image(320, 460, 'cartel_poligono').setOrigin(0.5, 1).setScale(1);
 
         // Mr Claw y Dialogo de Bienvenida
         this.mrClaw = this.add.image(780, 580, 'mr_claw').setOrigin(1, 1).setScale(0.4);
@@ -107,6 +100,7 @@ class MenuScene extends Phaser.Scene {
         this.carpaPepe.disableInteractive();
         this.carpaPerfil.disableInteractive();
         this.carpaDante.disableInteractive();
+        this.carpaPoligono.disableInteractive();
 
         // Bajar volumen de la música durante el tutorial
         if (this.musica) this.musica.setVolume(0.1);
@@ -162,6 +156,8 @@ class MenuScene extends Phaser.Scene {
             this.carpaPepe.setInteractive({ useHandCursor: true });
             this.carpaPerfil.setInteractive({ useHandCursor: true });
             this.carpaDante.setInteractive({ useHandCursor: true });
+            this.carpaPoligono.setInteractive({ useHandCursor: true });
+
         };
 
         const avanzar = () => {

@@ -247,7 +247,7 @@ class DagasScene extends Phaser.Scene {
             window.speechSynthesis.cancel();
             const texto = `¿Cuánto es ${this.multiplicacionActual.a} por ${this.multiplicacionActual.b}?`;
             this.voz = new SpeechSynthesisUtterance(texto);
-            this.voz.lang = 'es-ES';
+            this.voz.lang = 'es-VE';
             this.voz.onend = () => {
                 if (this.musica && this.juegoActivo) this.musica.setVolume(0.5); // Restaurar al terminar
             };

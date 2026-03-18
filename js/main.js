@@ -25,7 +25,7 @@ const config = {
         roundPixels: true
     },
 
-    scene: [MenuScene, TaquillaScene, PerfilScene, DagasScene],
+    scene: [MenuScene, TaquillaScene, PerfilScene, DagasScene, PoligonoScene],
 
     // Física Arcade ligera
     physics: {

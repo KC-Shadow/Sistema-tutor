@@ -300,7 +300,7 @@ class TaquillaScene extends Phaser.Scene {
             window.speechSynthesis.cancel(); 
             const voz = new SpeechSynthesisUtterance(msg);
             voz.volume = 1; 
-            voz.lang = 'es-ES'; 
+            voz.lang = 'es-VE'; 
 
             // Ajustar tono 
             const animalesGraves = ['bufalo', 'hipopotamo', 'oso', 'morsa', 'cerdo', 'tejon'];
