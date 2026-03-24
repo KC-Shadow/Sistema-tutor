@@ -17,6 +17,7 @@ class MenuScene extends Phaser.Scene {
         this.load.image('carpa_perfil_2', 'assets/menu/carpa_perfil_2.png');
         this.load.image('carpa_dante', 'assets/menu/carpa_dante.png');
         this.load.image('carpa_poligono', 'assets/menu/carpa_poligono.png')
+        this.load.image('carpa_milo', 'assets/menu/carpa_milo.png');
         
         // Carteles
         this.load.image('cartel_isosceles', 'assets/menu/cartel_isosceles.png');
@@ -24,6 +25,7 @@ class MenuScene extends Phaser.Scene {
         this.load.image('cartel_perfil', 'assets/menu/cartel_perfil.png');
         this.load.image('cartel_dante', 'assets/menu/cartel_dante.png');
         this.load.image('cartel_poligono', 'assets/menu/cartel_poligono.png');
+        this.load.image('cartel_milo', 'assets/menu/cartel_milo.png');
 
         // Personajes
 
@@ -85,6 +87,14 @@ class MenuScene extends Phaser.Scene {
         });
        this.add.image(320, 460, 'cartel_poligono').setOrigin(0.5, 1).setScale(1);
 
+       // Carpa para "Equilibrio de platillos"
+        this.carpaMilo = this.add.image(325, 225, 'carpa_milo').setScale(1).setInteractive({useHandCursor:true});
+        this.carpaMilo.on('pointerdown', () => {
+            this.musica.stop();
+            this.scene.start('MiloScene');
+        });
+        this.add.image(325, 275, 'cartel_milo').setOrigin(0.5, 1).setScale(1);
+
         // Mr Claw y Dialogo de Bienvenida
         this.mrClaw = this.add.image(780, 580, 'mr_claw').setOrigin(1, 1).setScale(0.4);
         this.nubeClaw = this.add.image(450, 225, 'dialogo_2').setOrigin(0, 0).setScale(0.75);
@@ -101,6 +111,7 @@ class MenuScene extends Phaser.Scene {
         this.carpaPerfil.disableInteractive();
         this.carpaDante.disableInteractive();
         this.carpaPoligono.disableInteractive();
+        this.carpaMilo.disableInteractive();
 
         // Bajar volumen de la música durante el tutorial
         if (this.musica) this.musica.setVolume(0.1);
@@ -157,6 +168,7 @@ class MenuScene extends Phaser.Scene {
             this.carpaPerfil.setInteractive({ useHandCursor: true });
             this.carpaDante.setInteractive({ useHandCursor: true });
             this.carpaPoligono.setInteractive({ useHandCursor: true });
+            this.carpaMilo.setInteractive({useHandCursor: true});
 
         };
 

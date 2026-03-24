@@ -234,7 +234,7 @@ class PoligonoScene extends Phaser.Scene {
 
         // Reproducir la instrucción por voz (Text-to-Speech)
         if (window.speechSynthesis) {
-            if (this.musica) this.musica.setVolume(0.1); // Bajar volumen de la música
+            if (this.musica) this.musica.setVolume(0.1); 
             window.speechSynthesis.cancel();
             
             // Ajustar tildes para una pronunciación perfecta
