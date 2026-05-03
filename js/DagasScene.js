@@ -49,13 +49,22 @@ class DagasScene extends Phaser.Scene {
     init() {
         //  Variables de Estado del Juego
         this.puntuacion = 0;
-        this.multiplicacionActual = { a: 0, b: 0, producto: 0 };
+        this.operacionActual = { a: 0, b: 0, resultado: 0, signo: '' };
         this.rondaActiva = false; // Controla si los 10s de la ronda están corriendo
         this.juegoActivo = false;  // Controla si los 120s del juego están corriendo
 
         this.preguntasRealizadas = 0;
-        this.maxPreguntas = 15;
+        this.maxPreguntas = 20;
         
+        // 5 de cada tipo: 0=Suma, 1=Resta, 2=Multiplicación, 3=División
+        this.operacionesPendientes = [
+            0, 0, 0, 0, 0, 
+            1, 1, 1, 1, 1, 
+            2, 2, 2, 2, 2, 
+            3, 3, 3, 3, 3
+        ];
+        Phaser.Utils.Array.Shuffle(this.operacionesPendientes);
+
         this.globosGroup = null; // Grupo de físicas para gestionar colisiones
     }
 
@@ -80,9 +89,9 @@ class DagasScene extends Phaser.Scene {
         this.globosGroup = this.physics.add.group();
 
         // UI 
-        this.txtMultiplicacion = this.add.text(200, 370, '', { 
+        this.txtOperacion = this.add.text(200, 370, '', { 
             fontFamily: 'Courier New', fontSize: '26px', fill: 'rgb(0, 0, 0)', fontStyle: 'bold', align: 'center', wordWrap: { width: 180 } }).setOrigin(0.5);
-        this.txtMultiplicacion.setVisible(false);
+        this.txtOperacion.setVisible(false);
 
         // Texto para el Tutorial
         this.txtTutorial = this.add.text(200, 370, '', { 
@@ -90,7 +99,7 @@ class DagasScene extends Phaser.Scene {
         }).setOrigin(0.5).setVisible(false);
 
         // Rondas
-        this.txtRondas = this.add.text(680, 90, 'RONDAS: 0/15', { fontFamily: 'Playbill', fontSize: '46px', fill: '#000000' }).setOrigin(0.5).setAngle(-9);
+        this.txtRondas = this.add.text(680, 90, 'RONDAS: 0/20', { fontFamily: 'Playbill', fontSize: '46px', fill: '#000000' }).setOrigin(0.5).setAngle(-9);
         
         // Mensajes de Ronda
         this.txtMensaje = this.add.text(680, 125, '', { fontFamily: 'Playbill', fontSize: '44px', fill: '#000000'}).setOrigin(0.5).setAngle(-9);
@@ -119,9 +128,9 @@ class DagasScene extends Phaser.Scene {
         const frases = [
             "¡Hola! Soy Dante. Bienvenido al reto de 'Dagas en el Aire'.",
             "Tu objetivo es reventar el globo que tenga la respuesta correcta.",
-            "Yo te mostraré una multiplicación, ¡calcula rápido!",
+            "Yo te mostraré una operación matemática, ¡calcula rápido!",
             "Haz clic en el globo correcto para lanzar una daga.",
-            "Tendrás 15 rondas para conseguir la mayor puntuación posible."
+            "Tendrás 20 rondas para conseguir la mayor puntuación posible."
         ];
 
         let paso = 0;
@@ -207,7 +216,7 @@ class DagasScene extends Phaser.Scene {
     comenzarJuego() {
         this.juegoActivo = true;
 
-        // Iniciar la primera ronda de multiplicación automáticamente
+        // Iniciar la primera ronda de operación automáticamente
         this.iniciarNuevaRonda();
     }
 
@@ -231,22 +240,53 @@ class DagasScene extends Phaser.Scene {
         // Limpiar ronda anterior (eliminar globos existentes)
         this.globosGroup.clear(true, true);
 
-        // Generar una nueva multiplicación (tablas del 1 al 10)
-        this.multiplicacionActual.a = Phaser.Math.Between(1, 10);
-        this.multiplicacionActual.b = Phaser.Math.Between(0, 10);
-        this.multiplicacionActual.producto = this.multiplicacionActual.a * this.multiplicacionActual.b;
+        // Generar una nueva operación (sumas, restas, multiplicacion, division del 0 al 100)
+        const tipoOperacion = this.operacionesPendientes.pop();
+        let a, b, resultado, signo, textoVoz;
 
-        // Dante indica la multiplicación en su nube
+        switch (tipoOperacion) {
+            case 0: // Suma
+                a = Phaser.Math.Between(0, 100);
+                b = Phaser.Math.Between(0, 100 - a); // El total no pasará de 100
+                resultado = a + b;
+                signo = '+';
+                textoVoz = `¿Cuánto es ${a} más ${b}?`;
+                break;
+            case 1: // Resta
+                a = Phaser.Math.Between(0, 100);
+                b = Phaser.Math.Between(0, a); // Para que no dé negativo
+                resultado = a - b;
+                signo = '-';
+                textoVoz = `¿Cuánto es ${a} menos ${b}?`;
+                break;
+            case 2: // Multiplicación
+                a = Phaser.Math.Between(0, 10);
+                b = Phaser.Math.Between(0, 10); // Resultados de 0 a 100
+                resultado = a * b;
+                signo = 'x';
+                textoVoz = `¿Cuánto es ${a} por ${b}?`;
+                break;
+            case 3: // División
+                b = Phaser.Math.Between(1, 10);
+                resultado = Phaser.Math.Between(0, 10);
+                a = b * resultado; // Así el resultado es entero exacto
+                signo = '÷';
+                textoVoz = `¿Cuánto es ${a} entre ${b}?`;
+                break;
+        }
+
+        this.operacionActual = { a, b, resultado, signo };
+
+        // Dante indica la operación en su nube
         this.dialogo.setVisible(true);
-        this.txtMultiplicacion.setText(`${this.multiplicacionActual.a} x ${this.multiplicacionActual.b} = ?`);
-        this.txtMultiplicacion.setVisible(true);
+        this.txtOperacion.setText(`${a} ${signo} ${b} = ?`);
+        this.txtOperacion.setVisible(true);
 
-        // Reproducir la multiplicación en audio
+        // Reproducir la operación en audio
         if (window.speechSynthesis) {
             if (this.musica) this.musica.setVolume(0.1); // Bajar volumen al hablar
             window.speechSynthesis.cancel();
-            const texto = `¿Cuánto es ${this.multiplicacionActual.a} por ${this.multiplicacionActual.b}?`;
-            this.voz = new SpeechSynthesisUtterance(texto);
+            this.voz = new SpeechSynthesisUtterance(textoVoz);
             this.voz.lang = 'es-VE';
             this.voz.onend = () => {
                 if (this.musica && this.juegoActivo) this.musica.setVolume(0.5); // Restaurar al terminar
@@ -271,12 +311,12 @@ class DagasScene extends Phaser.Scene {
         for (let i = 0; i < numGlobos; i++) {
             let valorGlobo;
             if (i === indiceCorrecto) {
-                valorGlobo = this.multiplicacionActual.producto; // Globo con el valor correcto
+                valorGlobo = this.operacionActual.resultado; // Globo con el valor correcto
             } else {
-                // Generar un valor incorrecto aleatorio que no sea el producto real
+                // Generar un valor incorrecto aleatorio que no sea el resultado real
                 do {
                     valorGlobo = Phaser.Math.Between(0, valorMaximoGloboIncorrecto);
-                } while (valorGlobo === this.multiplicacionActual.producto);
+                } while (valorGlobo === this.operacionActual.resultado);
             }
 
             // Convertir el valor a formato g_000 para cargar la imagen correcta
@@ -323,8 +363,8 @@ class DagasScene extends Phaser.Scene {
     lanzarDaga(globoObjetivo) {
         if (!this.juegoActivo || !this.rondaActiva) return; // No lanzar si el tiempo acabó o la ronda paró
 
-        // Ocultar la multiplicación temporalmente durante el lanzamiento
-        this.txtMultiplicacion.setVisible(false);
+        // Ocultar la operación temporalmente durante el lanzamiento
+        this.txtOperacion.setVisible(false);
         this.dialogo.setVisible(false);
         if (window.speechSynthesis) {
             window.speechSynthesis.cancel(); // Detener voz al actuar
@@ -352,7 +392,7 @@ class DagasScene extends Phaser.Scene {
         // Recuperar el valor oculto del globo impactado
         let valorGlobo = globoImpactado.getData('valor');
 
-        if (valorGlobo === this.multiplicacionActual.producto) { 
+        if (valorGlobo === this.operacionActual.resultado) { 
             this.puntuacion += 10; // Sumar puntos por acierto
             this.txtPuntuacion.setText(`Puntos: ${this.puntuacion}`);
             this.txtMensaje.setText('¡CORRECTO!');
@@ -374,7 +414,7 @@ class DagasScene extends Phaser.Scene {
                 onComplete: () => imgImpacto.destroy()
             });
 
-            // Esperar 1.5 segundos mostrando el acierto y pasar a la siguiente multiplicación
+            // Esperar 1.5 segundos mostrando el acierto y pasar a la siguiente operación
             this.time.delayedCall(1500, this.prepararSiguienteRonda, [], this);
         } else {
             // --- FALLO (Globo Incorrecto) ---
@@ -385,7 +425,7 @@ class DagasScene extends Phaser.Scene {
             globoImpactado.setTint(0x444444); 
             this.cameras.main.shake(200, 0.01); // Agitar cámara suave
 
-            // Esperar 2 segundos y avanzar a la SIGUIENTE ronda de multiplicación
+            // Esperar 2 segundos y avanzar a la SIGUIENTE ronda de operación
             this.time.delayedCall(2000, this.prepararSiguienteRonda, [], this);
         }
     }
@@ -395,7 +435,7 @@ class DagasScene extends Phaser.Scene {
         // Ocultar UI de ronda anterior
         this.txtMensaje.setText('');
         
-        // Iniciar nueva ronda con nueva multiplicación
+        // Iniciar nueva ronda con nueva operación
         this.iniciarNuevaRonda();
     }
 
@@ -405,7 +445,7 @@ class DagasScene extends Phaser.Scene {
 
         // Ocultar elementos de juego
         this.dialogo.setVisible(false);
-        this.txtMultiplicacion.setVisible(false);
+        this.txtOperacion.setVisible(false);
         this.globosGroup.clear(true, true);
         this.txtMensaje.setVisible(false);
         this.txtRondas.setVisible(false);

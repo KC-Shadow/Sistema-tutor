@@ -18,6 +18,7 @@ class MenuScene extends Phaser.Scene {
         this.load.image('carpa_dante', 'assets/menu/carpa_dante.png');
         this.load.image('carpa_poligono', 'assets/menu/carpa_poligono.png')
         this.load.image('carpa_milo', 'assets/menu/carpa_milo.png');
+        this.load.image('carpa_mago', 'assets/menu/carpa_mago.png');
         
         // Carteles
         this.load.image('cartel_isosceles', 'assets/menu/cartel_isosceles.png');
@@ -26,8 +27,7 @@ class MenuScene extends Phaser.Scene {
         this.load.image('cartel_dante', 'assets/menu/cartel_dante.png');
         this.load.image('cartel_poligono', 'assets/menu/cartel_poligono.png');
         this.load.image('cartel_milo', 'assets/menu/cartel_milo.png');
-
-        // Personajes
+        this.load.image('cartel_mago', 'assets/menu/cartel_mago.png');
 
         // Tutor Mr Claw
         this.load.image('mr_claw', 'assets/personajes_principales/mr_claw.png');
@@ -54,12 +54,12 @@ class MenuScene extends Phaser.Scene {
         this.musica.play();
 
         // Carpa para "La Taquilla de Pepe"
-        this.carpaPepe = this.add.image(135, 335, 'carpa_pepe').setInteractive({ useHandCursor: true });
+        this.carpaPepe = this.add.image(135, 410, 'carpa_pepe').setInteractive({ useHandCursor: true });
         this.carpaPepe.on('pointerdown', () => {
             this.musica.stop();
             this.scene.start('TaquillaScene'); // Cambiar a la escena del juego de Pepe
         }).setScale(0.75);
-        this.add.image(-25, 375, 'cartel_pepe').setOrigin(0, 1).setScale(1);
+        this.add.image(-25, 450, 'cartel_pepe').setOrigin(0, 1).setScale(1);
 
         // Carpa para el "Perfil del Jugador"
         this.carpaPerfil = this.add.image(675, 225, 'carpa_perfil').setInteractive({ useHandCursor: true });
@@ -95,6 +95,14 @@ class MenuScene extends Phaser.Scene {
         });
         this.add.image(325, 275, 'cartel_milo').setOrigin(0.5, 1).setScale(1);
 
+        // Carpa para "El Mago Zandor, el Magnifico"
+        this.carpaMago = this.add.image(100, 200, 'carpa_mago').setScale(1).setInteractive({useHandCursor: true});
+        this.carpaMago.on('pointerdown', () => {
+            this.musica.stop();
+            this.scene.start('MagoScene');
+        });
+        this.add.image(100, 150, 'cartel_mago').setScale(1);
+
         // Mr Claw y Dialogo de Bienvenida
         this.mrClaw = this.add.image(780, 580, 'mr_claw').setOrigin(1, 1).setScale(0.4);
         this.nubeClaw = this.add.image(450, 225, 'dialogo_2').setOrigin(0, 0).setScale(0.75);
@@ -112,6 +120,7 @@ class MenuScene extends Phaser.Scene {
         this.carpaDante.disableInteractive();
         this.carpaPoligono.disableInteractive();
         this.carpaMilo.disableInteractive();
+        this.carpaMago.disableInteractive();
 
         // Bajar volumen de la música durante el tutorial
         if (this.musica) this.musica.setVolume(0.1);
@@ -169,6 +178,7 @@ class MenuScene extends Phaser.Scene {
             this.carpaDante.setInteractive({ useHandCursor: true });
             this.carpaPoligono.setInteractive({ useHandCursor: true });
             this.carpaMilo.setInteractive({useHandCursor: true});
+            this.carpaMago.setInteractive({useHandCursor: true});
 
         };
 

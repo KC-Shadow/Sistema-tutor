@@ -7,20 +7,15 @@ class PoligonoScene extends Phaser.Scene {
         // Variables de Control
         this.puntuacion = 0;
         this.juegoActivo = false;
-        this.figuraObjetivo = '';
+        this.sumaActual = { a: 0, b: 0, resultado: 0 };
         this.rondaActiva = false;
         
         // Sistema de Munición
-        this.balasMaximas = 15; // Límite de 15 rondas de tiros
+        this.balasMaximas = 6; // Límite de 6 rondas de tiros
         this.balasRestantes = this.balasMaximas;
 
         // Grupos y Listas
         this.figurasGroup = null; 
-        this.nombresFiguras = [
-            'circulo', 'corazon', 'cruz', 'cuadrado', 'estrella', 'flecha', 
-            'heptagono', 'nube', 'ovalo', 'paralelogramo', 'pentagono',
-            'rectangulo', 'rombo', 'semicirculo', 'trapecio', 'triangulo'
-        ];
     }
 
     preload() {
@@ -48,10 +43,11 @@ class PoligonoScene extends Phaser.Scene {
         // Cartelera
         this.load.image('cartelera', 'assets/extra/cartelera.png');
 
-        // Figuras Geométricas
-        this.nombresFiguras.forEach(nombre => {
-            this.load.image(`fig_${nombre}`, `assets/poligono/figuras/${nombre}.png`);
-        });
+        // Dianas Pequeñas (0 al 100)
+        for (let i = 0; i <= 100; i++) {
+            let numStr = i.toString().padStart(3, '0');
+            this.load.image(`dp_${numStr}`, `assets/poligono/diana_pequena/dp_${numStr}.png`);
+        }
 
         // Audios Tutorial Diana
         for (let i = 1; i <= 5; i++) {
@@ -108,10 +104,10 @@ class PoligonoScene extends Phaser.Scene {
 
         const frases = [
             "¡Hola! Soy Diana. Bienvenido al Polígono de Tiro.",
-            "Tu objetivo es disparar a la figura geométrica correcta.",
-            "Yo te indicaré qué figura.",
+            "Tu objetivo es disparar a la diana con la respuesta correcta.",
+            "Yo te mostraré una suma.",
             "Apunta con tu ratón y haz clic para disparar el arma.",
-            "¡Tienes 15 tiros, consigue la mayor puntuación!"
+            "¡Tienes 6 tiros, consigue la mayor puntuación!"
         ];
 
         let paso = 0;
@@ -226,10 +222,12 @@ class PoligonoScene extends Phaser.Scene {
         this.rondaActiva = true;
         this.figurasGroup.clear(true, true);
 
-        // Diana elige objetivo
-        this.figuraObjetivo = Phaser.Math.RND.pick(this.nombresFiguras);
-        let articulo = ['cruz', 'estrella', 'flecha', 'nube'].includes(this.figuraObjetivo) ? 'LA' : 'EL';
-        this.txtInstruccion.setText(`¡BUSCA ${articulo}\n${this.figuraObjetivo.toUpperCase()}!`);
+        // Generar suma
+        this.sumaActual.a = Phaser.Math.Between(0, 100);
+        this.sumaActual.b = Phaser.Math.Between(0, 100 - this.sumaActual.a);
+        this.sumaActual.resultado = this.sumaActual.a + this.sumaActual.b;
+
+        this.txtInstruccion.setText(`¿Cuánto es\n${this.sumaActual.a} + ${this.sumaActual.b}?`);
         this.txtInstruccion.setColor('#000000');
 
         // Reproducir la instrucción por voz (Text-to-Speech)
@@ -237,11 +235,7 @@ class PoligonoScene extends Phaser.Scene {
             if (this.musica) this.musica.setVolume(0.1); 
             window.speechSynthesis.cancel();
             
-            // Ajustar tildes para una pronunciación perfecta
-            let tildes = { 'circulo': 'círculo', 'corazon': 'corazón', 'heptagono': 'heptágono', 'ovalo': 'óvalo', 'pentagono': 'pentágono', 'rectangulo': 'rectángulo', 'semicirculo': 'semicírculo', 'triangulo': 'triángulo' };
-            let figuraPronunciada = tildes[this.figuraObjetivo] || this.figuraObjetivo;
-            
-            const texto = `Busca ${articulo.toLowerCase()} ${figuraPronunciada}`;
+            const texto = `¿Cuánto es ${this.sumaActual.a} más ${this.sumaActual.b}?`;
             let voz = new SpeechSynthesisUtterance(texto);
             voz.lang = 'es-VE';
             voz.onend = () => {
@@ -254,11 +248,11 @@ class PoligonoScene extends Phaser.Scene {
     }
 
     crearObjetivosEnMovimiento() {
-        let seleccion = [this.figuraObjetivo];
+        let seleccion = [this.sumaActual.resultado];
         
-        // Necesitamos 9 figuras (3 filas x 3 columnas) para llenar la galería
+        // Necesitamos 9 dianas (3 filas x 3 columnas) para llenar la galería
         while (seleccion.length < 9) {
-            let aleatorio = Phaser.Math.RND.pick(this.nombresFiguras);
+            let aleatorio = Phaser.Math.Between(0, 100);
             if (!seleccion.includes(aleatorio)) seleccion.push(aleatorio);
         }
 
@@ -270,10 +264,11 @@ class PoligonoScene extends Phaser.Scene {
         let i = 0;
         filasY.forEach(y => {
             columnasX.forEach(x => {
-                let nombre = seleccion[i];
-                let fig = this.figurasGroup.create(x, y, `fig_${nombre}`).setScale(1.2);
+                let valor = seleccion[i];
+                let numStr = valor.toString().padStart(3, '0');
+                let fig = this.figurasGroup.create(x, y, `dp_${numStr}`).setScale(0.5);
                 
-                fig.setData('valor', nombre);
+                fig.setData('valor', valor);
                 fig.setVelocity(-100, 0); // Velocidad constante para que nunca se superpongan
                 
                 i++;
@@ -320,9 +315,9 @@ class PoligonoScene extends Phaser.Scene {
 
         this.sound.play('boom'); // Efecto de sonido al impactar la figura
 
-        let nombreImpactado = figura.getData('valor');
+        let valorImpactado = figura.getData('valor');
 
-        if (nombreImpactado === this.figuraObjetivo) {
+        if (valorImpactado === this.sumaActual.resultado) {
             this.puntuacion += 10;
             this.txtPuntos.setText(`PUNTOS: ${this.puntuacion}`);
             this.txtInstruccion.setText('¡EXCELENTE!');
@@ -341,8 +336,7 @@ class PoligonoScene extends Phaser.Scene {
     repetirMismoObjetivo() {
         if (this.balasRestantes > 0) {
             this.figurasGroup.clear(true, true);
-            let articulo = ['cruz', 'estrella', 'flecha', 'nube'].includes(this.figuraObjetivo) ? 'LA' : 'EL';
-            this.txtInstruccion.setText(`¡BUSCA ${articulo}\n${this.figuraObjetivo.toUpperCase()}!`);
+            this.txtInstruccion.setText(`¿Cuánto es\n${this.sumaActual.a} + ${this.sumaActual.b}?`);
             this.txtInstruccion.setColor('#0f0');
             
             // Reproducir la instrucción por voz al repetir
@@ -350,10 +344,7 @@ class PoligonoScene extends Phaser.Scene {
                 if (this.musica) this.musica.setVolume(0.1);
                 window.speechSynthesis.cancel();
                 
-                let tildes = { 'circulo': 'círculo', 'corazon': 'corazón', 'heptagono': 'heptágono', 'ovalo': 'óvalo', 'pentagono': 'pentágono', 'rectangulo': 'rectángulo', 'semicirculo': 'semicírculo', 'triangulo': 'triángulo' };
-                let figuraPronunciada = tildes[this.figuraObjetivo] || this.figuraObjetivo;
-                
-                const texto = `Busca ${articulo.toLowerCase()} ${figuraPronunciada}`;
+                const texto = `¿Cuánto es ${this.sumaActual.a} más ${this.sumaActual.b}?`;
                 let voz = new SpeechSynthesisUtterance(texto);
                 voz.lang = 'es-VE';
                 voz.onend = () => {

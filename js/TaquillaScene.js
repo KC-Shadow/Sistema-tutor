@@ -68,7 +68,7 @@ class TaquillaScene extends Phaser.Scene {
         
         // Cartelera Derecha (Tiempo y Puntos)
         this.add.image(550, -30, 'cartelera').setOrigin(0, 0).setScale(0.4);
-        this.txtVentas = this.add.text(600, 80, 'CLIENTES: 0/15', { fontFamily: 'Playbill', fontSize: '30px', fill: '#000000', fontWeight: 'bold' }).setAngle(-9);
+        this.txtVentas = this.add.text(600, 80, 'CLIENTES: 0/6', { fontFamily: 'Playbill', fontSize: '30px', fill: '#000000', fontWeight: 'bold' }).setAngle(-9);
         this.txtPuntos = this.add.text(600, 120, 'PUNTOS: 0', { fontFamily: 'Playbill', fontSize: '40px', fill: '#000000', fontWeight: 'bold' }).setAngle(-9);
 
         // Clientes
@@ -129,7 +129,7 @@ class TaquillaScene extends Phaser.Scene {
         this.lastNinos = -1; // Para evitar ventas repetidas
         this.lastAdultos = -1; // Para evitar ventas repetidas
         this.ventasRealizadas = 0;
-        this.maxVentas = 15;
+        this.maxVentas = 6;
 
         this.iniciarTutorial();
     }
@@ -141,7 +141,7 @@ class TaquillaScene extends Phaser.Scene {
             '"Las tarifas son: 4 Bs para los NIÑOS y 7 Bs para los ADULTOS. ¡Memorízalo bien!"',
             '"Calcula el total y mira cuánto paga el cliente. Si sobra dinero, debes dar VUELTO."',
             '"Jala la PALANCA para abrir la caja y haz clic en las monedas para sumar el vuelto exacto."',
-            '"Debes atender a 15 clientes. ¡Gana PUNTOS por cada venta correcta!"',
+            '"Debes atender a 6 clientes. ¡Gana PUNTOS por cada venta correcta!"',
             '"Cuando termines, jala la PALANCA de nuevo para confirmar. (Haz clic para empezar)"'
         ];
 

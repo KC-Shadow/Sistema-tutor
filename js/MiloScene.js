@@ -6,13 +6,15 @@ class MiloScene extends Phaser.Scene {
     init() {
         this.puntuacion = 0;
         this.rondaActual = 1;
-        this.rondasMaximas = 15;
+        this.maxRondas = 6;
+        this.division = { dividendo: 0, divisor: 0, cociente: 0 };
         
-        // Estado de los platos (8 porciones iniciales por plato)
+        // Estado de los platos 
         this.platos = {
-            amarillo: { porcionesRestantes: 8, objetivo: 0, listo: false },
-            rojo: { porcionesRestantes: 8, objetivo: 0, listo: false }
+            amarillo: { porciones: 8 },
+            rojo: { porciones: 8 }
         };
+        this.juegoActivo = false;
     }
 
     preload() {
@@ -47,7 +49,7 @@ class MiloScene extends Phaser.Scene {
         // Escenario Principal
         this.add.image(400, 300, 'fondo_milo').setDisplaySize(800, 600);
         this.cartelera = this.add.image(700, 100, 'cartelera_m').setScale(0.5);
-        this.txtHUD = this.add.text(700, 150, `Ronda: 1/15\nPuntos: 0`, 
+        this.txtHUD = this.add.text(700, 100, `Ronda: 1/${this.maxRondas}\nPuntos: 0`, 
             { fontFamily: 'Playbill', fontSize: '38px', fill: '#000000', align: 'center' }).setOrigin(0.5).setAngle(-9);
 
         // Milo y Diálogo
@@ -69,14 +71,14 @@ class MiloScene extends Phaser.Scene {
         this.milo.play('milo_anim');
 
         this.nube = this.add.image(150, 100, 'nube_m').setScale(0.8);
-        this.txtFraccion = this.add.text(150, 80, '', { fontFamily: 'Courier New', fontSize: '18px', fill: '#000', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
+        this.txtOperacion = this.add.text(150, 80, '', { fontFamily: 'Courier New', fontSize: '15px', fill: '#000', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
 
         // Varas y Platos Giratorios
         this.crearPlatosGiratorios();
 
         // Botón para Verificar el Resultado ---
         this.btnVerificar = this.add.text(400, 550, 'VERIFICAR EQUILIBRIO', { fontFamily: 'Courier New', fontSize: '20px', fill: '#000', backgroundColor: '#0f0', fontStyle: 'bold', padding: 10 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
-        this.btnVerificar.on('pointerdown', () => this.verificarResultado());
+        this.btnVerificar.on('pointerdown', () => this.verificarEquilibrio());
 
         this.iniciarTutorial();
     }
@@ -84,15 +86,15 @@ class MiloScene extends Phaser.Scene {
     iniciarTutorial() {
         const frases = [
             "¡Hola! Soy Milo. Bienvenido al circo.",
-            "Tu objetivo es representar las fracciones que te pediré.",
-            "Haz clic en las tortas para quitar porciones.",
+            "Tu objetivo es resolver la división que te pediré.",
+            "Deja en las tortas las porciones que sumen el resultado.",
             "Cuando estés seguro, presiona 'VERIFICAR EQUILIBRIO'.",
-            "¡Tendrás 15 rondas para demostrar tu destreza!"
+            "¡Tendrás 6 rondas para demostrar tu destreza!"
         ];
 
         let paso = 0;
-        this.txtFraccion.setStyle({ fontSize: '14px', fill: '#000', wordWrap: { width: 170 } });
-        this.txtFraccion.setText(frases[paso]);
+        this.txtOperacion.setStyle({ fontSize: '14px', fill: '#000', wordWrap: { width: 170 } });
+        this.txtOperacion.setText(frases[paso]);
 
         const darBrinco = () => {
             this.milo.y = 350;
@@ -118,8 +120,8 @@ class MiloScene extends Phaser.Scene {
             this.input.off('pointerdown', avanzar);
             btnSaltar.destroy();
             
-            this.txtFraccion.setStyle({ fontSize: '18px', fill: '#000', fontStyle: 'bold', wordWrap: null });
-            this.txtFraccion.setText('');
+            this.txtOperacion.setStyle({ fontSize: '15px', fill: '#000', fontStyle: 'bold', wordWrap: null });
+            this.txtOperacion.setText('');
             
             this.iniciarCuentaRegresiva();
         };
@@ -127,7 +129,7 @@ class MiloScene extends Phaser.Scene {
         const avanzar = () => {
             paso++;
             if (paso < frases.length) {
-                this.txtFraccion.setText(frases[paso]);
+                this.txtOperacion.setText(frases[paso]);
                 darBrinco();
             } else {
                 finalizarTutorial();
@@ -163,12 +165,12 @@ class MiloScene extends Phaser.Scene {
 
     crearPlatosGiratorios() {
         // Vara Izquierda (Amarillo)
-        this.varaIzq = this.add.image(250, 500, 'vara').setOrigin(0.5, 1).setVisible(false);
+        this.varaIzq = this.add.image(250, 600, 'vara').setOrigin(0.5, 1).setScale(1.5, 1).setVisible(false);
         this.pAmarillo = this.add.image(250, 350, 'plato_amarillo').setScale(1).setVisible(false);
         this.tortaAmarilla = this.add.sprite(250, 350, 'torta_base').setScale(0.6).setInteractive({ useHandCursor: true }).setVisible(false);
         
         // Vara Derecha (Rojo)
-        this.varaDer = this.add.image(550, 500, 'vara').setOrigin(0.5, 1).setVisible(false);
+        this.varaDer = this.add.image(550, 600, 'vara').setOrigin(0.5, 1).setScale(1.5, 1).setVisible(false);
         this.pRojo = this.add.image(550, 350, 'plato_rojo').setScale(1).setVisible(false);
         this.tortaRoja = this.add.sprite(550, 350, 'torta_base').setScale(0.6).setInteractive({ useHandCursor: true }).setVisible(false);
 
@@ -190,40 +192,44 @@ class MiloScene extends Phaser.Scene {
     }
 
     iniciarRonda() {
-        if (this.rondaActual > this.rondasMaximas) {
+        if (this.rondaActual > this.maxRondas) {
             this.finalizarJuego();
             return;
         }
 
-        const opciones = [
-            { texto: "1/8", val: 1 }, { texto: "1/4", val: 2 }, 
-            { texto: "1/2", val: 4 }, { texto: "3/4", val: 6 }
-        ];
+        // Generar división exacta aleatoria (variando el divisor para más dinamismo)
+        let divisor = Phaser.Math.Between(2, 5); 
+        let cociente = Phaser.Math.Between(2, 8); // Resultado que debe sumar el jugador
+        let dividendo = divisor * cociente;
 
-        this.platos.amarillo.objetivo = Phaser.Utils.Array.GetRandom(opciones);
-        this.platos.rojo.objetivo = Phaser.Utils.Array.GetRandom(opciones);
-        this.platos.amarillo.porcionesRestantes = 8;
-        this.platos.rojo.porcionesRestantes = 8;
+        this.division = { dividendo, divisor, cociente };
+
+        // Reiniciar platos
+        this.platos.amarillo.porciones = 8;
+        this.platos.rojo.porciones = 8;
 
         this.actualizarImagenTorta('amarillo');
         this.actualizarImagenTorta('rojo');
 
-        this.txtFraccion.setText(`Amarillo: ${this.platos.amarillo.objetivo.texto}\nRojo: ${this.platos.rojo.objetivo.texto}`);
-        this.txtHUD.setText(`Ronda: ${this.rondaActual}/15\nPuntos: ${this.puntuacion}`);
+        this.txtOperacion.setText(`¡EQUILIBRIO!\n${dividendo} ÷ ${divisor} = ?\n(Deja porciones que\nsumen el resultado)`);
+        this.txtHUD.setText(`Ronda: ${this.rondaActual}/${this.maxRondas}\nPuntos: ${this.puntuacion}`);
+        this.juegoActivo = true;
     }
 
     quitarPorcion(color) {
+        if (!this.juegoActivo) return;
+        
         let p = this.platos[color];
-        if (p.porcionesRestantes > 1) {
-            p.porcionesRestantes--;
+        if (p.porciones > 1) {
+            p.porciones--;
         } else {
-            p.porcionesRestantes = 8; // Reset si se acaban
+            p.porciones = 8; // Reset si se acaban
         }
         this.actualizarImagenTorta(color);
     }
 
     actualizarImagenTorta(color) {
-        let num = this.platos[color].porcionesRestantes;
+        let num = this.platos[color].porciones;
         let textura = (num === 8) ? 'torta_base' : `t_1_${8 - num}`;
         if (color === 'amarillo') {
             this.tortaAmarilla.setTexture(textura);
@@ -232,35 +238,42 @@ class MiloScene extends Phaser.Scene {
         }
     }
 
-    verificarResultado() {
-        let exito = (this.platos.amarillo.porcionesRestantes === this.platos.amarillo.objetivo.val) &&
-                    (this.platos.rojo.porcionesRestantes === this.platos.rojo.objetivo.val);
+    verificarEquilibrio() {
+        if (!this.juegoActivo) return;
+        this.juegoActivo = false;
+        
+        // Suma de las porciones que quedan visualmente en ambos platos
+        let sumaJugador = this.platos.amarillo.porciones + this.platos.rojo.porciones;
 
-        if (exito) {
+        if (sumaJugador === this.division.cociente) {
             this.puntuacion += 20;
-            this.txtFraccion.setText("¡EXCELENTE EQUILIBRIO!");
+            this.txtOperacion.setText("¡EQUILIBRIO LOGRADO!");
             this.time.delayedCall(2000, () => {
                 this.rondaActual++;
                 this.iniciarRonda();
             });
         } else {
-            // Sonido de error y platos caen
-            this.txtFraccion.setText("¡OH NO! SE CAYERON");
-            this.tweens.add({
-                targets: [this.pAmarillo, this.pRojo, this.tortaAmarilla, this.tortaRoja],
-                y: '+=200',
-                duration: 500,
-                ease: 'Power2'
-            });
-            this.time.delayedCall(2000, () => {
-                this.pAmarillo.y = 350;
-                this.pRojo.y = 350;
-                this.tortaAmarilla.y = 350;
-                this.tortaRoja.y = 350;
-                this.rondaActual++;
-                this.iniciarRonda();
-            });
+            this.txtOperacion.setText(`¡OH NO!\n${this.division.dividendo} ÷ ${this.division.divisor} es ${this.division.cociente}`);
+            this.caerPlatos();
         }
+    }
+
+    caerPlatos() {
+        // Animación de los platos cayendo por error
+        this.tweens.add({
+            targets: [this.pAmarillo, this.pRojo, this.tortaAmarilla, this.tortaRoja],
+            y: '+=200',
+            duration: 500,
+            ease: 'Power2'
+        });
+        this.time.delayedCall(2000, () => {
+            this.pAmarillo.y = 350;
+            this.pRojo.y = 350;
+            this.tortaAmarilla.y = 350;
+            this.tortaRoja.y = 350;
+            this.rondaActual++;
+            this.iniciarRonda();
+        });
     }
 
     finalizarJuego() {
