@@ -39,6 +39,8 @@ class PoligonoScene extends Phaser.Scene {
         // Música y Sonidos
         this.load.audio('musica_poligono', 'assets/music/circus_game3.mp3');
         this.load.audio('boom', 'assets/music/boom.mp3');
+        this.load.audio('ganar_p', 'assets/music/win.mp3');
+        this.load.audio('error_p', 'assets/music/error.mp3');
 
         // Cartelera
         this.load.image('cartelera', 'assets/extra/cartelera.png');
@@ -49,10 +51,9 @@ class PoligonoScene extends Phaser.Scene {
             this.load.image(`dp_${numStr}`, `assets/poligono/diana_pequena/dp_${numStr}.png`);
         }
 
-        // Audios Tutorial Diana
-        for (let i = 1; i <= 5; i++) {
-            let numStr = i.toString().padStart(3, '0');
-            this.load.audio(`audio_diana_${numStr}`, `assets/audios_tutor/audios_diana/audio_${numStr}.mp3`);
+        // Imágenes del tutorial de sumar
+        for (let i = 1; i <= 6; i++) {
+            this.load.image(`sumar${i}`, `assets/tutoria/sumar/sumar${i}.png`);
         }
     }
 
@@ -64,7 +65,7 @@ class PoligonoScene extends Phaser.Scene {
         // Diana y Nube de Diálogo
         this.diana = this.add.image(730, 500, 'diana_p').setScale(0.35);
         this.dialogo = this.add.image(660, 340, 'nube_p').setScale(0.75);
-        this.txtInstruccion = this.add.text(660, 315, '', { fontFamily: 'Courier New', fontSize: '18px', fill: '#0f0', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
+        this.txtInstruccion = this.add.text(660, 325, '', { fontFamily: 'Courier New', fontSize: '18px', fill: '#0f0', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
 
         // Grupo de Figuras
         this.figurasGroup = this.physics.add.group();
@@ -81,9 +82,10 @@ class PoligonoScene extends Phaser.Scene {
 
         // Botón Volver
         this.btnVolver = this.add.text(100, 570, 'MENÚ', { fontFamily: 'Courier New', fontSize: '16px', fill: '#fff', backgroundColor: '#3d2622', padding: 5 }).setInteractive({ useHandCursor: true });
-        this.btnVolver.on('pointerdown', () => {
+        this.btnVolver.on('pointerdown', (pointer, localX, localY, event) => {
+            event.stopPropagation(); // Evita avanzar el tutorial al hacer clic en menú
             this.sound.stopAll();
-            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            window.TTSManager.stop();
             this.scene.start('MenuScene');
         });
 
@@ -94,8 +96,99 @@ class PoligonoScene extends Phaser.Scene {
         // Eventos de Entrada
         this.input.on('pointerdown', this.disparar, this);
 
-        // Iniciar Tutorial
-        this.iniciarTutorial();
+        // Iniciar Tutorial de Suma primero
+        this.iniciarTutorialSuma();
+    }
+
+    iniciarTutorialSuma() {
+        this.dialogo.setVisible(true);
+        this.txtInstruccion.setVisible(true);
+
+        const tutorialSuma = [
+            { imagen: 'sumar1', texto: "¡Hola! Soy Diana. Hoy te enseñaré a resolver sumas de dos cifras con llevadas. ¡Es súper fácil! Mira este reto: queremos sumar 23 más 67." },
+            { imagen: 'sumar2', texto: "Para no confundirnos, primero ordenamos los números en columnas: las Unidades van en la columna azul a la derecha, y las Decenas en la columna roja a la izquierda." },
+            { imagen: 'sumar3', texto: "¡Siempre empezamos a sumar por la columna de las unidades! Fíjate en el recuadro amarillo: debemos calcular cuánto es 3 más 7." },
+            { imagen: 'sumar4', texto: "Al sumar 3 más 7 nos da 10. Como 10 no cabe entero ahí abajo, colocamos el cero en las unidades y 'llevamos' el 1 verde arriba de la columna de las decenas." },
+            { imagen: 'sumar5', texto: "Ahora sumamos la columna de las decenas. No olvides el 1 que llevamos: sumamos 1 más 2, que da 3... y 3 más 6, ¡nos da 9!" },
+            { imagen: 'sumar6', texto: "¡Y listo! Al juntar las decenas y las unidades, nuestro resultado final es 90. ¡Ahora estás preparado para apuntar y disparar a las dianas correctas en el juego!" }
+        ];
+
+        let paso = 0;
+        this.txtInstruccion.setStyle({ fontSize: '12px', fill: '#000', wordWrap: { width: 170 } });
+        this.txtInstruccion.setText(tutorialSuma[paso].texto);
+
+        // Bajar volumen de la música
+        if (this.musica) this.musica.setVolume(0.1);
+
+        // Crear la imagen para el tutorial (animación de arco de 90 grados desde la esquina inferior izquierda)
+        let path = new Phaser.Curves.Path(50, 700);
+        path.quadraticBezierTo(260, 340, 50, 340); // Termina al centro (260, 340), punto de control en (50, 340) para formar el arco
+
+        this.imgSuma = this.add.follower(path, 50, 750, tutorialSuma[paso].imagen).setDisplaySize(400, 300).setDepth(5);
+        this.imgSuma.startFollow({
+            duration: 1000,
+            ease: 'Sine.easeOut'
+        });
+
+        const darBrinco = () => {
+            this.diana.y = 500;
+            this.tweenDiana = this.tweens.add({
+                targets: this.diana,
+                y: 490,
+                duration: 150,
+                yoyo: true
+            });
+        };
+        darBrinco();
+
+        // Instrucción para avanzar
+        const txtAvanzar = this.add.text(400, 560, '(Presiona la pantalla para avanzar)', { 
+            fontFamily: 'Courier New', fontSize: '14px', fill: '#fff', backgroundColor: '#000', padding: 5 
+        }).setOrigin(0.5);
+
+        // Botón Saltar
+        const btnSaltar = this.add.text(760, 360, 'SALTAR >>', { 
+            fontFamily: 'Courier New', fontSize: '14px', fill: '#333', fontStyle: 'bold' 
+        }).setOrigin(1, 1).setInteractive({ useHandCursor: true });
+
+        const finalizarTutorialSuma = () => {
+            if (this.tweenDiana) {
+                this.tweenDiana.stop();
+                this.diana.y = 500;
+            }
+            window.TTSManager.stop();
+            
+            this.input.off('pointerdown', avanzar);
+            btnSaltar.destroy();
+            txtAvanzar.destroy();
+            if (this.imgSuma) this.imgSuma.destroy();
+            
+            // Iniciar el tutorial del juego original
+            this.iniciarTutorial();
+        };
+
+        const avanzar = () => {
+            window.TTSManager.stop();
+            paso++;
+            if (paso < tutorialSuma.length) {
+                this.txtInstruccion.setText(tutorialSuma[paso].texto);
+                this.imgSuma.setTexture(tutorialSuma[paso].imagen);
+                this.imgSuma.setDisplaySize(400, 300); // Forzar el mismo tamaño para la nueva imagen
+                darBrinco();
+                window.TTSManager.speak(tutorialSuma[paso].texto, 'Diana');
+            } else {
+                finalizarTutorialSuma();
+            }
+        };
+
+        window.TTSManager.speak(tutorialSuma[paso].texto, 'Diana');
+
+        btnSaltar.on('pointerdown', (pointer, localX, localY, event) => {
+            event.stopPropagation();
+            finalizarTutorialSuma();
+        });
+
+        this.input.on('pointerdown', avanzar);
     }
 
     iniciarTutorial() {
@@ -103,7 +196,7 @@ class PoligonoScene extends Phaser.Scene {
         this.txtInstruccion.setVisible(true);
 
         const frases = [
-            "¡Hola! Soy Diana. Bienvenido al Polígono de Tiro.",
+            "Bienvenido al Polígono de Tiro.",
             "Tu objetivo es disparar a la diana con la respuesta correcta.",
             "Yo te mostraré una suma.",
             "Apunta con tu ratón y haz clic para disparar el arma.",
@@ -117,10 +210,7 @@ class PoligonoScene extends Phaser.Scene {
         // Bajar volumen de la música de fondo durante el tutorial
         if (this.musica) this.musica.setVolume(0.1);
 
-        // Reproducir primer audio
-        let numStr = (paso + 1).toString().padStart(3, '0');
-        this.audioTutorial = this.sound.add(`audio_diana_${numStr}`);
-        this.audioTutorial.play();
+        window.TTSManager.speak(frases[paso], 'Diana');
 
         const darBrinco = () => {
             this.diana.y = 500;
@@ -139,8 +229,8 @@ class PoligonoScene extends Phaser.Scene {
         }).setOrigin(1, 1).setInteractive({ useHandCursor: true });
 
         const finalizarTutorial = () => {
-            // Detener el audio si está sonando y restaurar la música
-            if (this.audioTutorial) this.audioTutorial.stop();
+            window.TTSManager.stop();
+            // Restaurar la música
             if (this.musica) this.musica.setVolume(0.3); 
 
             if (this.tweenDiana) {
@@ -152,23 +242,18 @@ class PoligonoScene extends Phaser.Scene {
             btnSaltar.destroy();
             
             // Restaurar estilo original de la instrucción para el juego
-            this.txtInstruccion.setStyle({ fontSize: '18px', fill: '#0f0', wordWrap: null });
+            this.txtInstruccion.setStyle({ fontSize: '22px', fill: '#0f0', wordWrap: null });
             this.txtInstruccion.setText('');
             
             this.iniciarCuentaRegresiva();
         };
 
         const avanzar = () => {
-            if (this.audioTutorial) this.audioTutorial.stop();
-            
+            window.TTSManager.stop();
             paso++;
             if (paso < frases.length) {
                 this.txtInstruccion.setText(frases[paso]);
-                
-                let numStr = (paso + 1).toString().padStart(3, '0');
-                this.audioTutorial = this.sound.add(`audio_diana_${numStr}`);
-                this.audioTutorial.play();
-                
+                window.TTSManager.speak(frases[paso], 'Diana');
                 darBrinco();
             } else {
                 finalizarTutorial();
@@ -222,28 +307,28 @@ class PoligonoScene extends Phaser.Scene {
         this.rondaActiva = true;
         this.figurasGroup.clear(true, true);
 
-        // Generar suma
-        this.sumaActual.a = Phaser.Math.Between(0, 100);
-        this.sumaActual.b = Phaser.Math.Between(0, 100 - this.sumaActual.a);
+        // Generar suma asegurando que no se repita la anterior
+        let nuevoA, nuevoB;
+        do {
+            nuevoA = Phaser.Math.Between(0, 100);
+            nuevoB = Phaser.Math.Between(0, 100 - nuevoA);
+        } while (nuevoA === this.sumaActual.a && nuevoB === this.sumaActual.b);
+
+        this.sumaActual.a = nuevoA;
+        this.sumaActual.b = nuevoB;
         this.sumaActual.resultado = this.sumaActual.a + this.sumaActual.b;
 
         this.txtInstruccion.setText(`¿Cuánto es\n${this.sumaActual.a} + ${this.sumaActual.b}?`);
         this.txtInstruccion.setColor('#000000');
 
         // Reproducir la instrucción por voz (Text-to-Speech)
-        if (window.speechSynthesis) {
-            if (this.musica) this.musica.setVolume(0.1); 
-            window.speechSynthesis.cancel();
-            
-            const texto = `¿Cuánto es ${this.sumaActual.a} más ${this.sumaActual.b}?`;
-            let voz = new SpeechSynthesisUtterance(texto);
-            voz.lang = 'es-VE';
-            voz.onend = () => {
-                if (this.musica && this.juegoActivo) this.musica.setVolume(0.3); // Restaurar música
-            };
-            window.speechSynthesis.speak(voz);
-        }
+        if (this.musica) this.musica.setVolume(0.1); 
+        const texto = `¿Cuánto es ${this.sumaActual.a} más ${this.sumaActual.b}?`;
+        window.TTSManager.speak(texto, 'Diana', () => {
+            if (this.musica && this.juegoActivo) this.musica.setVolume(0.3); // Restaurar música
+        });
 
+        this.rondaStartTime = this.time.now; // Iniciar cronómetro
         this.crearObjetivosEnMovimiento();
     }
 
@@ -283,29 +368,35 @@ class PoligonoScene extends Phaser.Scene {
         this.txtBalas.setText(`TIROS: ${this.balasRestantes}`);
 
         // Detener la voz si el jugador dispara rápido y restaurar la música
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        window.TTSManager.stop();
         if (this.musica) this.musica.setVolume(0.3);
 
         // Crear bala
-        let bala = this.physics.add.sprite(this.arma.x, this.arma.y, 'bala_p').setScale(0.4);
+        let bala = this.add.sprite(this.arma.x, this.arma.y, 'bala_p').setScale(0.4);
         bala.rotation = this.arma.rotation;
-        this.physics.moveTo(bala, pointer.x, pointer.y, 900);
 
-        // Determinar a qué fila apuntó el jugador según la posición Y del puntero
-        let targetY = 350; // Fila inferior por defecto
-        if (pointer.y < 245) {
-            targetY = 210; // Fila superior
-        } else if (pointer.y < 315) {
-            targetY = 280; // Fila del medio
-        }
+        // Detectar exactamente qué figura fue clickeada evitando problemas de físicas rápidas (tunneling)
+        let figuraImpactada = null;
+        this.figurasGroup.getChildren().forEach(fig => {
+            // Expandir un poco el área de la figura (hitbox) para que sea más fácil acertar
+            let bounds = fig.getBounds();
+            bounds.x -= 15; bounds.y -= 15; bounds.width += 30; bounds.height += 30;
+            if (Phaser.Geom.Rectangle.Contains(bounds, pointer.x, pointer.y)) {
+                figuraImpactada = fig;
+            }
+        });
 
-        // Filtrar las figuras para que la bala solo colisione con las de la fila apuntada
-        let figurasFila = this.figurasGroup.getChildren().filter(fig => fig.y === targetY);
-
-        // Detectar impacto SOLO con las figuras de esa fila (evita obstáculos en el camino)
-        this.physics.add.overlap(bala, figurasFila, (b, f) => {
-            b.destroy();
-            this.procesarImpacto(f);
+        this.tweens.add({
+            targets: bala,
+            x: pointer.x,
+            y: pointer.y,
+            duration: 150, // Vuelo ultra rápido visual
+            onComplete: () => {
+                bala.destroy();
+                if (figuraImpactada) {
+                    this.procesarImpacto(figuraImpactada);
+                }
+            }
         });
     }
 
@@ -316,54 +407,40 @@ class PoligonoScene extends Phaser.Scene {
         this.sound.play('boom'); // Efecto de sonido al impactar la figura
 
         let valorImpactado = figura.getData('valor');
+        let esCorrecto = (valorImpactado === this.sumaActual.resultado);
+        let timeElapsed = (this.time.now - this.rondaStartTime) / 1000;
 
-        if (valorImpactado === this.sumaActual.resultado) {
+        let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (currentUser) {
+            window.LearningAgent.logInteraction(
+                currentUser.id, 'PoligonoScene', 'Suma', 'Dificultad_Normal', 
+                esCorrecto, valorImpactado, timeElapsed
+            );
+        }
+
+        if (esCorrecto) {
+            this.sound.play('ganar_p');
             this.puntuacion += 10;
             this.txtPuntos.setText(`PUNTOS: ${this.puntuacion}`);
             this.txtInstruccion.setText('¡EXCELENTE!');
-            this.txtInstruccion.setColor('#0f0');
+            this.txtInstruccion.setColor('rgb(21, 0, 255)');
             figura.destroy();
             this.time.delayedCall(1500, this.iniciarNuevaRonda, [], this);
         } else {
+            this.sound.play('error_p');
             this.txtInstruccion.setText('¡FALLASTE!');
             this.txtInstruccion.setColor('#f00');
             figura.setTint(0x444444);
             this.cameras.main.shake(200, 0.01);
-            this.time.delayedCall(2000, this.repetirMismoObjetivo, [], this);
-        }
-    }
-
-    repetirMismoObjetivo() {
-        if (this.balasRestantes > 0) {
-            this.figurasGroup.clear(true, true);
-            this.txtInstruccion.setText(`¿Cuánto es\n${this.sumaActual.a} + ${this.sumaActual.b}?`);
-            this.txtInstruccion.setColor('#0f0');
-            
-            // Reproducir la instrucción por voz al repetir
-            if (window.speechSynthesis) {
-                if (this.musica) this.musica.setVolume(0.1);
-                window.speechSynthesis.cancel();
-                
-                const texto = `¿Cuánto es ${this.sumaActual.a} más ${this.sumaActual.b}?`;
-                let voz = new SpeechSynthesisUtterance(texto);
-                voz.lang = 'es-VE';
-                voz.onend = () => {
-                    if (this.musica && this.juegoActivo) this.musica.setVolume(0.3);
-                };
-                window.speechSynthesis.speak(voz);
-            }
-
-            this.crearObjetivosEnMovimiento();
-            this.rondaActiva = true;
-        } else {
-            this.finalizarJuego();
+            // Al fallar, avanza y coloca una nueva pregunta
+            this.time.delayedCall(2000, this.iniciarNuevaRonda, [], this);
         }
     }
 
     finalizarJuego() {
         this.rondaActiva = false;
         this.physics.pause();
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        window.TTSManager.stop();
         this.add.rectangle(400, 300, 800, 600, 0x000000, 0.7);
         this.add.text(400, 300, `FIN DEL JUEGO\nPuntos: ${this.puntuacion}`, { 
             fontFamily: 'Courier New', fontSize: '40px', fill: '#f00', align: 'center' 

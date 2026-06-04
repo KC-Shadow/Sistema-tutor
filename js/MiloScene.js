@@ -43,13 +43,22 @@ class MiloScene extends Phaser.Scene {
         this.load.image('n_002', 'assets/extra/n_002.png');
         this.load.image('n_001', 'assets/extra/n_001.png');
         this.load.audio('cuenta_regresiva', 'assets/music/cuenta_regresiva.mp3');
+
+        // Sonidos de ganar y error
+        this.load.audio('ganar_milo', 'assets/music/win.mp3');
+        this.load.audio('error_milo', 'assets/music/error.mp3');
+
+        // Imágenes del tutorial de dividir
+        for (let i = 1; i <= 8; i++) {
+            this.load.image(`dividir${i}`, `assets/tutoria/dividir/dividir${i}.png`);
+        }
     }
 
     create() {
         // Escenario Principal
         this.add.image(400, 300, 'fondo_milo').setDisplaySize(800, 600);
-        this.cartelera = this.add.image(700, 100, 'cartelera_m').setScale(0.5);
-        this.txtHUD = this.add.text(700, 100, `Ronda: 1/${this.maxRondas}\nPuntos: 0`, 
+        this.cartelera = this.add.image(700, 100, 'cartelera_m').setScale(0.4);
+        this.txtHUD = this.add.text(700, 120, `Ronda: 1/${this.maxRondas}\nPuntos: 0`, 
             { fontFamily: 'Playbill', fontSize: '38px', fill: '#000000', align: 'center' }).setOrigin(0.5).setAngle(-9);
 
         // Milo y Diálogo
@@ -70,8 +79,8 @@ class MiloScene extends Phaser.Scene {
         });
         this.milo.play('milo_anim');
 
-        this.nube = this.add.image(150, 100, 'nube_m').setScale(0.8);
-        this.txtOperacion = this.add.text(150, 80, '', { fontFamily: 'Courier New', fontSize: '15px', fill: '#000', fontStyle: 'bold', align: 'center' }).setOrigin(0.5);
+        this.nube = this.add.image(170, 130, 'nube_m').setDisplaySize(300, 200);
+        this.txtOperacion = this.add.text(170, 105, '', { fontFamily: 'Courier New', fontSize: '15px', fill: '#000', fontStyle: 'bold', align: 'center', wordWrap: { width: 240 } }).setOrigin(0.5);
 
         // Varas y Platos Giratorios
         this.crearPlatosGiratorios();
@@ -80,12 +89,111 @@ class MiloScene extends Phaser.Scene {
         this.btnVerificar = this.add.text(400, 550, 'VERIFICAR EQUILIBRIO', { fontFamily: 'Courier New', fontSize: '20px', fill: '#000', backgroundColor: '#0f0', fontStyle: 'bold', padding: 10 }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setVisible(false);
         this.btnVerificar.on('pointerdown', () => this.verificarEquilibrio());
 
-        this.iniciarTutorial();
+        this.iniciarTutorialDivision();
+    }
+
+    iniciarTutorialDivision() {
+        this.nube.setVisible(true);
+        this.txtOperacion.setVisible(true);
+        this.milo.setVisible(true);
+
+        const tutorialDiv = [
+            { imagen: 'dividir1', texto: "¡Hola, hola! Soy Milo el equilibrista. Hoy aprenderemos el secreto para mantener el equilibrio en la cuerda floja: ¡la división! Miren este gran reto: queremos dividir 95 entre 5." },
+            { imagen: 'dividir2', texto: "Para resolverlo como un profesional, transformamos la operación horizontal en una división de galería usando nuestra famosa cajita o galera. ¡Miren cómo se convierte a la derecha!" },
+            { imagen: 'dividir3', texto: "Al igual que en los otros juegos, organizamos por columnas. Las Decenas van en rojo a la izquierda y las Unidades en azul a la derecha. El divisor, que es el 5, va dentro de la cajita negra." },
+            { imagen: 'dividir4', texto: "¡A diferencia de la suma, aquí empezamos por la izquierda! En el recuadro amarillo tomamos el 9 de las decenas. ¿Cuántas veces cabe el 5 en el 9? Cabe una sola vez. Colocamos el 1 verde abajo de la cajita, restamos 5 al 9... ¡y nos quedan 4 decenas!" },
+            { imagen: 'dividir5', texto: "Ahora, el 5 de las unidades baja en el ascensor azul, justo al lado del 4 que nos había quedado en el recuadro amarillo. ¡Al unirse, se transforman en el número 45!" },
+            { imagen: 'dividir6', texto: "Buscamos en la tabla del 5 un número que nos dé 45. ¡Es el 9 verde! Colocamos el 9 al lado del 1 bajo la cajita. Multiplicamos 5 por 9, que da 45, lo restamos al 45 azul... ¡y nos queda un residuo de cero!" },
+            { imagen: 'dividir7', texto: "¡Qué gran hazaña! Como ven con la flecha verde, al repartir el 95 en 5 partes exactas, cada grupo recibe 19, y no nos sobra absolutamente nada en la pista." },
+            { imagen: 'dividir8', texto: "¡Un aplauso del público! Nuestro resultado final es 19. Ahora que ya conocen el truco del reparto exacto, ¡vamos a colocar las porciones necesarias en mis platos para mantener el equilibrio perfecto!" }
+        ];
+
+        let paso = 0;
+        this.txtOperacion.setStyle({ fontSize: '12px', fill: '#000', wordWrap: { width: 240 } });
+        this.txtOperacion.setText(tutorialDiv[paso].texto);
+
+        // Animación de arco ajustada para no salir de los márgenes de la pantalla (resolución de 800x600)
+        let pathDiv = new Phaser.Curves.Path(680, 580);
+        pathDiv.quadraticBezierTo(680, 420, 580, 420); 
+
+        this.imgDiv = this.add.follower(pathDiv, 680, 580, tutorialDiv[paso].imagen).setDisplaySize(360, 270).setDepth(5);
+        
+        const animarImagen = () => {
+            this.imgDiv.setPosition(680, 580);
+            this.imgDiv.startFollow({
+                duration: 800,
+                ease: 'Sine.easeOut'
+            });
+        };
+        animarImagen();
+
+        const darBrinco = () => {
+            this.milo.y = 350;
+            this.tweenMilo = this.tweens.add({
+                targets: this.milo,
+                y: 340,
+                duration: 150,
+                yoyo: true
+            });
+        };
+        darBrinco();
+
+        const txtAvanzar = this.add.text(400, 570, '(Presiona la pantalla para avanzar)', { 
+            fontFamily: 'Courier New', fontSize: '14px', fill: '#fff', backgroundColor: '#000', padding: 5 
+        }).setOrigin(0.5).setDepth(6);
+
+        const btnSaltar = this.add.text(200, 450, 'SALTAR >>', { 
+            fontFamily: 'Courier New', fontSize: '14px', fill: '#333', fontStyle: 'bold' 
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(6);
+
+        const finalizarTutorialDiv = () => {
+            if (this.tweenMilo) {
+                this.tweenMilo.stop();
+                this.milo.y = 350;
+            }
+            window.TTSManager.stop();
+            
+            this.input.off('pointerdown', avanzar);
+            btnSaltar.destroy();
+            txtAvanzar.destroy();
+            if (this.imgDiv) this.imgDiv.destroy();
+            
+            // Restauramos el estilo del texto original para el siguiente tutorial
+            this.txtOperacion.setStyle({ fontSize: '14px', fill: '#000', fontStyle: 'bold', wordWrap: { width: 240 } });
+            this.txtOperacion.setText('');
+            
+            this.iniciarTutorial();
+        };
+
+        const avanzar = () => {
+            window.TTSManager.stop();
+            paso++;
+            if (paso < tutorialDiv.length) {
+                this.txtOperacion.setText(tutorialDiv[paso].texto);
+                this.imgDiv.setTexture(tutorialDiv[paso].imagen);
+                this.imgDiv.setDisplaySize(360, 270);
+                animarImagen();
+                darBrinco();
+                
+                window.TTSManager.speak(tutorialDiv[paso].texto, 'Milo');
+            } else {
+                finalizarTutorialDiv();
+            }
+        };
+
+        window.TTSManager.speak(tutorialDiv[paso].texto, 'Milo');
+
+        btnSaltar.on('pointerdown', (pointer, localX, localY, event) => {
+            event.stopPropagation();
+            finalizarTutorialDiv();
+        });
+
+        this.input.on('pointerdown', avanzar);
     }
 
     iniciarTutorial() {
         const frases = [
-            "¡Hola! Soy Milo. Bienvenido al circo.",
+            "Bienvenido al show del equilibrista.",
             "Tu objetivo es resolver la división que te pediré.",
             "Deja en las tortas las porciones que sumen el resultado.",
             "Cuando estés seguro, presiona 'VERIFICAR EQUILIBRIO'.",
@@ -93,7 +201,7 @@ class MiloScene extends Phaser.Scene {
         ];
 
         let paso = 0;
-        this.txtOperacion.setStyle({ fontSize: '14px', fill: '#000', wordWrap: { width: 170 } });
+        this.txtOperacion.setStyle({ fontSize: '14px', fill: '#000', wordWrap: { width: 240 } });
         this.txtOperacion.setText(frases[paso]);
 
         const darBrinco = () => {
@@ -120,7 +228,7 @@ class MiloScene extends Phaser.Scene {
             this.input.off('pointerdown', avanzar);
             btnSaltar.destroy();
             
-            this.txtOperacion.setStyle({ fontSize: '15px', fill: '#000', fontStyle: 'bold', wordWrap: null });
+            this.txtOperacion.setStyle({ fontSize: '15px', fill: '#000', fontStyle: 'bold', wordWrap: { width: 240 } });
             this.txtOperacion.setText('');
             
             this.iniciarCuentaRegresiva();
@@ -198,9 +306,13 @@ class MiloScene extends Phaser.Scene {
         }
 
         // Generar división exacta aleatoria (variando el divisor para más dinamismo)
-        let divisor = Phaser.Math.Between(2, 5); 
-        let cociente = Phaser.Math.Between(2, 8); // Resultado que debe sumar el jugador
-        let dividendo = divisor * cociente;
+        // Asegurarse de que no se repita la división de la ronda anterior
+        let divisor, cociente, dividendo;
+        do {
+            divisor = Phaser.Math.Between(2, 5); 
+            cociente = Phaser.Math.Between(2, 8); // Resultado que debe sumar el jugador
+            dividendo = divisor * cociente;
+        } while (dividendo === this.division.dividendo && divisor === this.division.divisor);
 
         this.division = { dividendo, divisor, cociente };
 
@@ -213,6 +325,7 @@ class MiloScene extends Phaser.Scene {
 
         this.txtOperacion.setText(`¡EQUILIBRIO!\n${dividendo} ÷ ${divisor} = ?\n(Deja porciones que\nsumen el resultado)`);
         this.txtHUD.setText(`Ronda: ${this.rondaActual}/${this.maxRondas}\nPuntos: ${this.puntuacion}`);
+        this.rondaStartTime = this.time.now;
         this.juegoActivo = true;
     }
 
@@ -244,8 +357,19 @@ class MiloScene extends Phaser.Scene {
         
         // Suma de las porciones que quedan visualmente en ambos platos
         let sumaJugador = this.platos.amarillo.porciones + this.platos.rojo.porciones;
+        let esCorrecto = (sumaJugador === this.division.cociente);
+        let timeElapsed = (this.time.now - this.rondaStartTime) / 1000;
 
-        if (sumaJugador === this.division.cociente) {
+        let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (currentUser) {
+            window.LearningAgent.logInteraction(
+                currentUser.id, 'MiloScene', 'Divisiones', 'Dificultad_Normal', 
+                esCorrecto, sumaJugador, timeElapsed
+            );
+        }
+
+        if (esCorrecto) {
+            this.sound.play('ganar_milo');
             this.puntuacion += 20;
             this.txtOperacion.setText("¡EQUILIBRIO LOGRADO!");
             this.time.delayedCall(2000, () => {
@@ -253,6 +377,7 @@ class MiloScene extends Phaser.Scene {
                 this.iniciarRonda();
             });
         } else {
+            this.sound.play('error_milo');
             this.txtOperacion.setText(`¡OH NO!\n${this.division.dividendo} ÷ ${this.division.divisor} es ${this.division.cociente}`);
             this.caerPlatos();
         }
@@ -277,6 +402,7 @@ class MiloScene extends Phaser.Scene {
     }
 
     finalizarJuego() {
+        window.TTSManager.stop();
         this.scene.start('MenuScene');
     }
 }

@@ -55,9 +55,9 @@ class TaquillaScene extends Phaser.Scene {
         this.load.audio('error', 'assets/music/error.mp3');
         this.load.audio('ganar', 'assets/music/win.mp3');
 
-        // Audios Tutorial Pepe
+        // Imágenes del tutorial de restar
         for (let i = 1; i <= 6; i++) {
-            this.load.audio(`audio_pepe_${i}`, `assets/audios_tutor/audios_pepe/audio_${i}.mp3`);
+            this.load.image(`restar${i}`, `assets/tutoria/restar/restar${i}.png`);
         }
     }
 
@@ -95,13 +95,13 @@ class TaquillaScene extends Phaser.Scene {
 
         // Diálogo Cliente
         this.nubeCliente = this.add.image(150, 190, 'dialogo_2').setOrigin(0, 0).setScale(0.7).setAlpha(0);
-        this.txtCliente = this.add.text(175, 215, '', { 
+        this.txtCliente = this.add.text(175, 225, '', { 
             fontFamily: 'Courier New', fontSize: '16px', fill: '#000', align: 'center', wordWrap: { width: 140 } 
         }).setAlpha(0);
 
         // Tutorial y Diálogo
         this.nube = this.add.image(50, 150, 'dialogo').setOrigin(0, 0);
-        this.txtPepe = this.add.text(80, 180, '', { 
+        this.txtPepe = this.add.text(80, 190, '', { 
             fontFamily: 'Courier New', fontSize: '18px', fill: '#000', wordWrap: { width: 230 } 
         });
 
@@ -116,9 +116,10 @@ class TaquillaScene extends Phaser.Scene {
         })
         .setOrigin(1, 1)
         .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => {
+        .on('pointerdown', (pointer, localX, localY, event) => {
+            event.stopPropagation();
             this.sound.stopAll(); // Detener música y tutoriales
-            if (window.speechSynthesis) window.speechSynthesis.cancel(); // Detener voz del cliente si está hablando
+            window.TTSManager.stop();
             this.scene.start('MenuScene');
         });
 
@@ -131,13 +132,110 @@ class TaquillaScene extends Phaser.Scene {
         this.ventasRealizadas = 0;
         this.maxVentas = 6;
 
-        this.iniciarTutorial();
+        this.iniciarTutorialResta();
+    }
+
+    iniciarTutorialResta() {
+        this.nube.setVisible(true);
+        this.txtPepe.setVisible(true);
+        this.pepe.setVisible(true);
+
+        const tutorialResta = [
+            { imagen: 'restar1', texto: "¡Hola, amiguito! Soy Pepe. Hoy te enseñaré cómo restar prestando de una forma muy sencilla. Imagina que un cliente viene a la taquilla y me toca resolver esta operación: 62 menos 38." },
+            { imagen: 'restar2', texto: "Para no equivocarnos con el dinero, organizamos los números en columnas. Las Unidades van a la derecha en color azul, y las Decenas a la izquierda en color rojo." },
+            { imagen: 'restar3', texto: "¡Siempre empezamos por la columna de las unidades! En el recuadro amarillo vemos que a 2 debemos quitarle 8. Pero ¡ay, caramba!, el 2 es menor que el 8 y no le alcanza. Así que el 2 le pide ayuda a su vecino, el 6." },
+            { imagen: 'restar4', texto: "El 6, que es un buen vecino, le presta una decena al 2. Al colocarle ese 1 al lado, el 2 se transforma en un poderoso 12. Ahora sí podemos restar en el recuadro amarillo: ¡12 menos 8 nos da 4!" },
+            { imagen: 'restar5', texto: "¡Ahora vamos con la columna de las decenas! Como el 6 prestó una, ya no es un 6, ¡ahora es un 5! En el recuadro amarillo restamos las decenas que nos quedan: 5 menos 3, lo que nos da 2." },
+            { imagen: 'restar6', texto: "¡Y listo! Al juntar las decenas y las unidades descubrimos el resultado final: ¡24! ¡Ya aprendiste a restar prestando! Prepárate para calcular los vueltos y ganarle al reloj en la taquilla." }
+        ];
+
+        let paso = 0;
+        this.txtPepe.setStyle({ fontSize: '13px', fill: '#000', wordWrap: { width: 230 } });
+        this.txtPepe.setText(tutorialResta[paso].texto);
+
+        if (this.musica) this.musica.setVolume(0.05);
+
+        let pathResta = new Phaser.Curves.Path(600, 750);
+        pathResta.quadraticBezierTo(600, 420, 380, 420); 
+
+        this.imgResta = this.add.follower(pathResta, 600, 750, tutorialResta[paso].imagen).setDisplaySize(400, 300).setDepth(5);
+        
+        const animarImagen = () => {
+            this.imgResta.setPosition(600, 750);
+            this.imgResta.startFollow({
+                duration: 800,
+                ease: 'Sine.easeOut'
+            });
+        };
+        animarImagen();
+
+        const darBrinco = () => {
+            this.pepe.y = 500;
+            this.tweenPepe = this.tweens.add({
+                targets: this.pepe,
+                y: 490,
+                duration: 150,
+                yoyo: true
+            });
+        };
+        darBrinco();
+
+        const txtAvanzar = this.add.text(400, 560, '(Presiona la pantalla para avanzar)', { 
+            fontFamily: 'Courier New', fontSize: '14px', fill: '#fff', backgroundColor: '#000', padding: 5 
+        }).setOrigin(0.5);
+
+        const btnSaltar = this.add.text(200, 290, 'SALTAR >>', { 
+            fontFamily: 'Courier New', fontSize: '16px', fill: '#0c0b0b', fontWeight: 'bold' 
+        }).setInteractive({ useHandCursor: true });
+
+        const finalizarTutorialResta = () => {
+            if (this.tweenPepe) {
+                this.tweenPepe.stop();
+                this.pepe.y = 500;
+            }
+            window.TTSManager.stop();
+            
+            this.input.off('pointerdown', avanzar);
+            btnSaltar.destroy();
+            txtAvanzar.destroy();
+            if (this.imgResta) this.imgResta.destroy();
+            
+            this.txtPepe.setStyle({ fontSize: '18px', fill: '#000', wordWrap: { width: 230 } });
+            this.txtPepe.setText('');
+            
+            this.iniciarTutorial();
+        };
+
+        const avanzar = () => {
+            window.TTSManager.stop();
+            paso++;
+            if (paso < tutorialResta.length) {
+                this.txtPepe.setText(tutorialResta[paso].texto);
+                this.imgResta.setTexture(tutorialResta[paso].imagen);
+                this.imgResta.setDisplaySize(400, 300);
+                animarImagen();
+                darBrinco();
+                
+                window.TTSManager.speak(tutorialResta[paso].texto, 'Pepe');
+            } else {
+                finalizarTutorialResta();
+            }
+        };
+
+        window.TTSManager.speak(tutorialResta[paso].texto, 'Pepe');
+
+        btnSaltar.on('pointerdown', (pointer, localX, localY, event) => {
+            event.stopPropagation();
+            finalizarTutorialResta();
+        });
+
+        this.input.on('pointerdown', avanzar);
     }
 
     iniciarTutorial() {
         // Secuencia de diálogos del tutorial
         const dialogos = [
-            '"¡Hola! Soy Pepe. Bienvenido a la taquilla. Tu misión es vender entradas para el circo."',
+            '"Bienvenido a la taquilla. Tu misión es vender entradas para el circo."',
             '"Las tarifas son: 4 Bs para los NIÑOS y 7 Bs para los ADULTOS. ¡Memorízalo bien!"',
             '"Calcula el total y mira cuánto paga el cliente. Si sobra dinero, debes dar VUELTO."',
             '"Jala la PALANCA para abrir la caja y haz clic en las monedas para sumar el vuelto exacto."',
@@ -148,9 +246,7 @@ class TaquillaScene extends Phaser.Scene {
         let pasoActual = 0;
         this.txtPepe.setText(dialogos[pasoActual]);
 
-        // Reproducir primer audio
-        this.audioTutorial = this.sound.add('audio_pepe_1', { volume: 1.0 });
-        this.audioTutorial.play();
+        window.TTSManager.speak(dialogos[pasoActual], 'Pepe');
 
         // Animación de hablar (un solo brinco)
         const darBrinco = () => {
@@ -173,7 +269,7 @@ class TaquillaScene extends Phaser.Scene {
         }).setInteractive({ useHandCursor: true });
 
         const finalizarTutorial = () => {
-            if (this.audioTutorial) this.audioTutorial.stop();
+            window.TTSManager.stop();
 
             // Detener animación de hablar
             if (this.tweenPepe) {
@@ -204,12 +300,11 @@ class TaquillaScene extends Phaser.Scene {
 
         // Función para avanzar al siguiente texto
         const avanzarDialogo = () => {
-            if (this.audioTutorial) this.audioTutorial.stop();
+            window.TTSManager.stop();
             pasoActual++;
             if (pasoActual < dialogos.length) {
                 this.txtPepe.setText(dialogos[pasoActual]);
-                this.audioTutorial = this.sound.add(`audio_pepe_${pasoActual + 1}`, { volume: 1.0 });
-                this.audioTutorial.play();
+                window.TTSManager.speak(dialogos[pasoActual], 'Pepe');
                 darBrinco();
             } else {
                 finalizarTutorial();
@@ -296,25 +391,9 @@ class TaquillaScene extends Phaser.Scene {
         this.cliente.setTexture(`cliente_${clienteSeleccionado}`).setAlpha(1);
         
         // TEXT-TO-SPEECH
-        if (window.speechSynthesis) {
-            window.speechSynthesis.cancel(); 
-            const voz = new SpeechSynthesisUtterance(msg);
-            voz.volume = 1; 
-            voz.lang = 'es-VE'; 
-
-            // Ajustar tono 
-            const animalesGraves = ['bufalo', 'hipopotamo', 'oso', 'morsa', 'cerdo', 'tejon'];
-            const animalesAgudos = ['raton', 'conejo', 'pinguino', 'cisne', 'pavo', 'buho'];
-
-            if (animalesGraves.includes(clienteSeleccionado)) {
-                voz.pitch = 0.6; 
-                voz.rate = 0.9; 
-            } else if (animalesAgudos.includes(clienteSeleccionado)) {
-                voz.pitch = 1.4; 
-                voz.rate = 1.1; 
-            }
-            window.speechSynthesis.speak(voz);
-        }
+        const animalesGraves = ['bufalo', 'hipopotamo', 'oso', 'morsa', 'cerdo', 'tejon'];
+        let charVoice = animalesGraves.includes(clienteSeleccionado) ? 'ClienteGrave' : 'ClienteAgudo';
+        window.TTSManager.speak(msg, charVoice);
 
         this.mostrarPagoEnMostrador(this.pagoCliente);
         
@@ -371,6 +450,7 @@ class TaquillaScene extends Phaser.Scene {
         this.monedasVueltoContainer.setAlpha(1);
         this.txtPantalla.setText(`TOTAL: ${this.montoTotal}.00\nVUELTO: 0.00`);
         
+        this.rondaStartTime = this.time.now; // Iniciar cronómetro de respuesta
         // Al volver a pulsar la palanca se valida
         this.palanca.removeAllListeners('pointerdown');
         this.palanca.on('pointerdown', () => this.validarOperacion());
@@ -382,7 +462,19 @@ class TaquillaScene extends Phaser.Scene {
         this.palanca.setTexture('palanca');
         this.palanca.y = 320;
 
-        if (this.vueltoEntregado === this.vueltoCorrecto) {
+        let esCorrecto = (this.vueltoEntregado === this.vueltoCorrecto);
+        let timeElapsed = (this.time.now - this.rondaStartTime) / 1000;
+
+        // Registrar Interacción en BKT y RL
+        let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (currentUser) {
+            window.LearningAgent.logInteraction(
+                currentUser.id, 'TaquillaScene', 'Resta Monetaria', 'Dificultad_Normal', 
+                esCorrecto, this.vueltoEntregado, timeElapsed
+            );
+        }
+
+        if (esCorrecto) {
             this.sound.play('ganar');
             this.puntos += 10;
             this.txtPuntos.setText('PUNTOS: ' + this.puntos);
@@ -426,7 +518,7 @@ class TaquillaScene extends Phaser.Scene {
 
         btnVolverMenu.on('pointerdown', () => {
             this.sound.stopAll();
-            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            window.TTSManager.stop();
             this.scene.start('MenuScene');
         });
     }

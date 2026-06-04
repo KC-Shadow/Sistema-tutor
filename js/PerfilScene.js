@@ -4,7 +4,14 @@ class PerfilScene extends Phaser.Scene {
     }
 
     create() {
-        const perfilContainer = document.getElementById('perfil-container');
+        let perfilContainer = document.getElementById('perfil-container');
+        
+        // Si no existe, lo creamos dinámicamente y lo agregamos al body
+        if (!perfilContainer) {
+            perfilContainer = document.createElement('div');
+            perfilContainer.id = 'perfil-container';
+            document.body.appendChild(perfilContainer);
+        }
         
         // Estilos para centrar y ajustar el contenedor al navegador
         Object.assign(perfilContainer.style, {
@@ -35,8 +42,6 @@ class PerfilScene extends Phaser.Scene {
                 #perfil-form input, #perfil-form select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
                 #perfil-form input[type="submit"] { background-color: #4CAF50; color: white; border: none; padding: 10px; margin-top: 20px; width: 100%; cursor: pointer; border-radius: 4px; font-size: 16px; }
                 #perfil-form input[type="submit"]:hover { background-color: #45a049; }
-                #btn-descargar { background-color: #008CBA; color: white; border: none; padding: 10px; margin-top: 10px; width: 100%; cursor: pointer; border-radius: 4px; font-size: 16px; }
-                #btn-descargar:hover { background-color: #007bb5; }
                 #btn-volver { background-color: #f44336; color: white; border: none; padding: 10px; margin-top: 10px; width: 100%; cursor: pointer; border-radius: 4px; font-size: 16px; }
                 #btn-volver:hover { background-color: #d32f2f; }
                 /* Estilos para selección de avatar */
@@ -62,6 +67,10 @@ class PerfilScene extends Phaser.Scene {
                 <input type="text" id="nombre" name="nombre" required>
                 <label for="apellido">Apellido:</label>
                 <input type="text" id="apellido" name="apellido" required>
+                <label for="username">Nombre de Usuario (Login):</label>
+                <input type="text" id="username" name="username" required>
+                <label for="password">Contraseña (Login):</label>
+                <input type="password" id="password" name="password" required>
                 <label for="sexo">Sexo:</label>
                 <select id="sexo" name="sexo">
                     <option value="masculino">Masculino</option>
@@ -71,11 +80,13 @@ class PerfilScene extends Phaser.Scene {
                 
                 <label for="edad">Edad:</label>
                 <input type="number" id="edad" name="edad" required>
-                <label for="id">ID:</label>
-                <input type="text" id="id" name="id" required>
+                <label for="grado">Grado Escolar:</label>
+                <select id="grado" name="grado" required>
+                    <option value="5to">5to</option>
+                    <option value="6to">6to</option>
+                </select>
                 
                 <input type="submit" value="Guardar y Salir">
-                <button type="button" id="btn-descargar">Descargar JSON</button>
                 <button type="button" id="btn-volver">Volver al Menú</button>
             </form>
         `;
@@ -84,55 +95,37 @@ class PerfilScene extends Phaser.Scene {
         // Gestionar el envío del formulario
         const form = document.getElementById('perfil-form');
 
-        // Botón Descargar JSON
-        document.getElementById('btn-descargar').addEventListener('click', () => {
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-            const formData = new FormData(form);
-            const perfilData = {
-                nombre: formData.get('nombre'),
-                apellido: formData.get('apellido'),
-                sexo: formData.get('sexo'),
-                imagen: formData.get('imagen'),
-                edad: formData.get('edad'),
-                id: formData.get('id')
-            };
-            const blob = new Blob([JSON.stringify(perfilData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'perfil_jugador.json';
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-
         form.addEventListener('submit', (event) => {
             event.preventDefault();
             // Lógica para guardar la información del perfil
             const formData = new FormData(form);
             const perfilData = {
+                id: 'STU_' + Math.floor(Math.random() * 100000), // Generar ID automático
                 nombre: formData.get('nombre'),
                 apellido: formData.get('apellido'),
+                username: formData.get('username'),
+                password: formData.get('password'),
                 sexo: formData.get('sexo'),
                 imagen: formData.get('imagen'),
                 edad: formData.get('edad'),
-                id: formData.get('id')
+                grado: formData.get('grado')
             };
             console.log('Información del perfil guardada:', perfilData);
             
-            // Guardar en LocalStorage (para que el juego recuerde los datos)
-            localStorage.setItem('perfilJugador', JSON.stringify(perfilData));
+            // Agregar usuario al log de cuentas y autorizar acceso inmediato
+            let users = JSON.parse(localStorage.getItem('gameUsers')) || [];
+            users.push(perfilData);
+            localStorage.setItem('gameUsers', JSON.stringify(users));
+            localStorage.setItem('currentUser', JSON.stringify(perfilData));
 
             // Ocultar el formulario y volver al menú principal
-            perfilContainer.style.display = 'none';
+            perfilContainer.remove();
             this.scene.start('MenuScene');
         });
 
         // Botón para volver al menú principal sin guardar (HTML)
         document.getElementById('btn-volver').addEventListener('click', () => {
-            perfilContainer.style.display = 'none';
+            perfilContainer.remove();
             this.scene.start('MenuScene');
         });
     }
