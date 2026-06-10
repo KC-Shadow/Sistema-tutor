@@ -58,7 +58,7 @@ class MiloScene extends Phaser.Scene {
         // Escenario Principal
         this.add.image(400, 300, 'fondo_milo').setDisplaySize(800, 600);
         this.cartelera = this.add.image(700, 100, 'cartelera_m').setScale(0.4);
-        this.txtHUD = this.add.text(700, 120, `Ronda: 1/${this.maxRondas}\nPuntos: 0`, 
+        this.txtHUD = this.add.text(700, 120, `RONDAS: 1/${this.maxRondas}\nPUNTOS: 0`, 
             { fontFamily: 'Playbill', fontSize: '38px', fill: '#000000', align: 'center' }).setOrigin(0.5).setAngle(-9);
 
         // Milo y Diálogo
@@ -92,7 +92,14 @@ class MiloScene extends Phaser.Scene {
         this.iniciarTutorialDivision();
     }
 
+    opacarJuego(opacar) {
+        let alpha = opacar ? 0.3 : 1;
+        if (this.cartelera) this.cartelera.setAlpha(alpha);
+        if (this.txtHUD) this.txtHUD.setAlpha(alpha);
+    }
+
     iniciarTutorialDivision() {
+        this.opacarJuego(true);
         this.nube.setVisible(true);
         this.txtOperacion.setVisible(true);
         this.milo.setVisible(true);
@@ -231,6 +238,7 @@ class MiloScene extends Phaser.Scene {
             this.txtOperacion.setStyle({ fontSize: '15px', fill: '#000', fontStyle: 'bold', wordWrap: { width: 240 } });
             this.txtOperacion.setText('');
             
+            this.opacarJuego(false);
             this.iniciarCuentaRegresiva();
         };
 
@@ -310,7 +318,7 @@ class MiloScene extends Phaser.Scene {
         let divisor, cociente, dividendo;
         do {
             divisor = Phaser.Math.Between(2, 5); 
-            cociente = Phaser.Math.Between(2, 8); // Resultado que debe sumar el jugador
+            cociente = Phaser.Math.Between(1, 8) * 2; // Resultado par garantizado hasta 16 (2, 4, 6, 8, 10, 12, 14, 16)
             dividendo = divisor * cociente;
         } while (dividendo === this.division.dividendo && divisor === this.division.divisor);
 
@@ -324,7 +332,7 @@ class MiloScene extends Phaser.Scene {
         this.actualizarImagenTorta('rojo');
 
         this.txtOperacion.setText(`¡EQUILIBRIO!\n${dividendo} ÷ ${divisor} = ?\n(Deja porciones que\nsumen el resultado)`);
-        this.txtHUD.setText(`Ronda: ${this.rondaActual}/${this.maxRondas}\nPuntos: ${this.puntuacion}`);
+        this.txtHUD.setText(`RONDAS: ${this.rondaActual}/${this.maxRondas}\nPUNTOS: ${this.puntuacion}`);
         this.rondaStartTime = this.time.now;
         this.juegoActivo = true;
     }
@@ -364,7 +372,8 @@ class MiloScene extends Phaser.Scene {
         if (currentUser) {
             window.LearningAgent.logInteraction(
                 currentUser.id, 'MiloScene', 'Divisiones', 'Dificultad_Normal', 
-                esCorrecto, sumaJugador, timeElapsed
+                esCorrecto, sumaJugador, timeElapsed,
+                `${this.division.dividendo} ÷ ${this.division.divisor}`, this.division.cociente
             );
         }
 
@@ -402,7 +411,27 @@ class MiloScene extends Phaser.Scene {
     }
 
     finalizarJuego() {
-        window.TTSManager.stop();
-        this.scene.start('MenuScene');
+        this.juegoActivo = false;
+
+        // Ocultar elementos de juego
+        this.milo.setAlpha(0);
+        this.nube.setAlpha(0);
+        this.txtOperacion.setAlpha(0);
+        if (this.btnVerificar) this.btnVerificar.setVisible(false);
+
+        // Pantalla de fin de juego
+        this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
+        this.add.text(400, 250, '¡FIN DEL JUEGO!', { fontFamily: 'Courier New', fontSize: '56px', fill: '#f00', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(400, 350, `Puntuación Final: ${this.puntuacion}`, { fontFamily: 'Courier New', fontSize: '32px', fill: '#d4a373' }).setOrigin(0.5);
+
+        const btnVolverMenu = this.add.text(400, 480, 'Volver al Menú', { 
+            fontFamily: 'Courier New', fontSize: '24px', fill: '#fff', backgroundColor: '#3d2622', padding: 10 
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        btnVolverMenu.on('pointerdown', () => {
+            this.sound.stopAll();
+            window.TTSManager.stop();
+            this.scene.start('MenuScene');
+        });
     }
 }

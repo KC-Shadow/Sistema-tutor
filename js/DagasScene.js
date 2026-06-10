@@ -53,16 +53,17 @@ class DagasScene extends Phaser.Scene {
         this.juegoActivo = false;  // Controla si los 120s del juego están corriendo
 
         this.preguntasRealizadas = 0;
-        this.maxPreguntas = 32;
+        this.maxPreguntas = 24;
         
-        // 32 rondas en total: 8 Sumas, 8 Restas, 8 Multiplicaciones, 8 Divisiones
+        // 24 rondas en total: 6 ciclos de Suma(0), Resta(1), Multiplicación(2), División(3)
         this.operacionesPendientes = [
-            0, 0, 0, 0, 0, 0, 0, 0, 
-            1, 1, 1, 1, 1, 1, 1, 1, 
-            2, 2, 2, 2, 2, 2, 2, 2,
-            3, 3, 3, 3, 3, 3, 3, 3
+            0, 1, 2, 3, 
+            0, 1, 2, 3,
+            0, 1, 2, 3, 
+            0, 1, 2, 3, 
+            0, 1, 2, 3, 
+            0, 1, 2, 3 
         ];
-        Phaser.Utils.Array.Shuffle(this.operacionesPendientes);
 
         this.globosGroup = null; // Grupo de físicas para gestionar colisiones
     }
@@ -117,7 +118,18 @@ class DagasScene extends Phaser.Scene {
         this.iniciarTutorial();
     }
 
+    opacarJuego(opacar) {
+        let alpha = opacar ? 0.3 : 1;
+        if (this.diana) this.diana.setAlpha(alpha);
+        if (this.cartelera) this.cartelera.setAlpha(alpha);
+        if (this.txtRondas) this.txtRondas.setAlpha(alpha);
+        if (this.txtMensaje) this.txtMensaje.setAlpha(alpha);
+        if (this.txtPuntuacion) this.txtPuntuacion.setAlpha(alpha);
+        if (this.btnVolver) this.btnVolver.setAlpha(alpha);
+    }
+
     iniciarTutorial() {
+        this.opacarJuego(true);
         this.dialogo.setVisible(true);
         this.txtTutorial.setVisible(true);
 
@@ -170,6 +182,7 @@ class DagasScene extends Phaser.Scene {
             btnSaltar.destroy();
             this.txtTutorial.setVisible(false);
             this.dialogo.setVisible(false); 
+            this.opacarJuego(false);
             this.iniciarCuentaRegresiva();
         };
 
@@ -234,8 +247,8 @@ class DagasScene extends Phaser.Scene {
         // Limpiar ronda anterior (eliminar globos existentes)
         this.globosGroup.clear(true, true);
 
-        // Generar una nueva operación (sumas, restas, multiplicacion, division del 0 al 100)
-        const tipoOperacion = this.operacionesPendientes.pop();
+        // Obtener la siguiente operación en orden secuencial
+        const tipoOperacion = this.operacionesPendientes.shift();
         let a, b, resultado, signo, textoVoz;
 
         switch (tipoOperacion) {
@@ -394,7 +407,8 @@ class DagasScene extends Phaser.Scene {
         if (currentUser) {
             window.LearningAgent.logInteraction(
                 currentUser.id, 'DagasScene', kcActual, 'Dificultad_Adaptativa', 
-                esCorrecto, valorGlobo, timeElapsed
+                esCorrecto, valorGlobo, timeElapsed,
+                `${this.operacionActual.a} ${this.operacionActual.signo} ${this.operacionActual.b}`, this.operacionActual.resultado
             );
         }
 
@@ -459,16 +473,18 @@ class DagasScene extends Phaser.Scene {
         this.txtMensaje.setVisible(false);
         this.txtRondas.setVisible(false);
 
-        // PANTALLA DE RESULTADOS 
-        this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8).setOrigin(0.5);
-
+        // Pantalla de fin de juego
+        this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
         this.add.text(400, 250, '¡FIN DEL JUEGO!', { fontFamily: 'Courier New', fontSize: '56px', fill: '#f00', fontStyle: 'bold' }).setOrigin(0.5);
         this.add.text(400, 350, `Puntuación Final: ${this.puntuacion}`, { fontFamily: 'Courier New', fontSize: '32px', fill: '#d4a373' }).setOrigin(0.5);
 
-        // Reemplazar el botón Volver existente por uno de resultados
         this.btnVolver.setVisible(false);
-        this.btnFinJuego = this.add.text(400, 480, 'Volver al Menú', { fontFamily: 'Courier New', fontSize: '24px', fill: '#fff', backgroundColor: '#3d2622', padding: 10 }).setInteractive({ useHandCursor: true });
-        this.btnFinJuego.on('pointerdown', () => {
+        
+        const btnVolverMenu = this.add.text(400, 480, 'Volver al Menú', { 
+            fontFamily: 'Courier New', fontSize: '24px', fill: '#fff', backgroundColor: '#3d2622', padding: 10 
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        btnVolverMenu.on('pointerdown', () => {
             this.sound.stopAll();
             window.TTSManager.stop();
             this.scene.start('MenuScene');

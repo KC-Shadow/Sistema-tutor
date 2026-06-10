@@ -40,9 +40,25 @@ class DashboardScene extends Phaser.Scene {
     }
 
     descargarJSONDatos() {
+        const gameLogs = JSON.parse(localStorage.getItem('gameLogs')) || [];
+        
+        // Mapear métricas para que el JSON exportado tenga exactamente los campos y orden solicitados
+        const metricasExportadas = gameLogs.map(l => ({
+            userId: l.userId,
+            gameId: l.gameId,
+            kc: l.kc,
+            "numero de intento": l["numero de intento"] || 1,
+            isCorrect: l.isCorrect,
+            input: l.input,
+            pregunta: l.pregunta,
+            "respuesta correcta": l["respuesta correcta"] !== undefined ? l["respuesta correcta"] : l.respuestaCorrecta,
+            responseTime: l.responseTime,
+            timestamp: l.timestamp
+        }));
+
         const data = {
             usuarios: JSON.parse(localStorage.getItem('gameUsers')) || [],
-            metricas: JSON.parse(localStorage.getItem('gameLogs')) || [],
+            metricas: metricasExportadas,
             bktState: JSON.parse(localStorage.getItem('bktState')) || {},
             qTable: JSON.parse(localStorage.getItem('qTable')) || {},
             juegosJugados: JSON.parse(localStorage.getItem('juegosJugados')) || {}
@@ -193,7 +209,11 @@ class DashboardScene extends Phaser.Scene {
                     <div style="display: flex; gap: 25px; align-items: flex-end; height: 150px; padding-top: 20px; border-bottom: 1px solid #555;">
                         ${this.generateChartsHTML(userLogs)}
                     </div>
-                    <div style="margin-top: 10px; font-size: 12px;"><span style="color:#4CAF50;">■ Aciertos</span> &nbsp; <span style="color:#F44336;">■ Errores</span></div>
+                    <div style="margin-top: 15px; font-size: 13px; text-align: center;">
+                        <span style="color:#4CAF50; font-weight: bold;">■ Barra Verde:</span> Aciertos &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; 
+                        <span style="color:#F44336; font-weight: bold;">■ Barra Roja:</span> Errores &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; 
+                        <span style="color:#ccc; font-weight: bold;">Total:</span> Cantidad de preguntas realizadas
+                    </div>
                 </div>
             </div>
 
@@ -202,29 +222,26 @@ class DashboardScene extends Phaser.Scene {
                 <h3>2 & 3. Trazas de Interacción y Evidencias (Event Log)</h3>
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
                     <thead><tr style="border-bottom: 1px solid #555; background: #333;">
-                        <th style="padding: 10px;">Juego</th><th style="padding: 10px;">Habilidad (KC)</th><th style="padding: 10px;">P(L_t) BKT</th>
-                        <th style="padding: 10px;">Respuesta (r)</th><th style="padding: 10px;">Input Niño</th><th style="padding: 10px;">Tiempo (s)</th>
+                        <th style="padding: 10px;">Juego</th>
+                        <th style="padding: 10px;">Habilidad (KC)</th>
+                        <th style="padding: 10px;">Intento</th>
+                        <th style="padding: 10px;">Respuesta</th>
+                        <th style="padding: 10px;">Input Niño</th>
+                        <th style="padding: 10px;">Pregunta</th>
+                        <th style="padding: 10px;">R. Correcta</th>
+                        <th style="padding: 10px;">Tiempo (s)</th>
+                        <th style="padding: 10px;">Timestamp</th>
                     </tr></thead>
                     <tbody>${userLogs.map(l => `<tr style="border-bottom: 1px solid #444;">
-                        <td style="padding: 8px;">${l.gameId}</td><td style="padding: 8px;">${l.kc}</td><td style="padding: 8px;">${l.initialState.toFixed(2)}</td>
-                        <td style="padding: 8px; color: ${l.isCorrect ? '#4CAF50' : '#F44336'}">${l.isCorrect ? 'Correcto (1)' : 'Error (0)'}</td><td style="padding: 8px;">${l.input}</td><td style="padding: 8px;">${l.responseTime}s</td>
-                    </tr>`).join('')}</tbody>
-                </table>
-            </div>
-
-            <!-- 4 y 6. Comparación Algoritmos RL vs BKT -->
-            <div style="margin-top: 20px; background: #2a2a2a; padding: 20px; border-radius: 8px; overflow-x: auto;">
-                <h3>4 & 6. Comparación de Agentes: RL vs BKT</h3>
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
-                    <thead><tr style="border-bottom: 1px solid #555; background: #333;">
-                        <th style="padding: 10px;">Seq (t)</th><th style="padding: 10px;">KC</th>
-                        <th style="padding: 10px; border-left: 2px solid #555;">BKT: P(Lt-1)</th><th style="padding: 10px;">BKT: Transición P(L_next)</th><th style="padding: 10px;">BKT: P(S)/P(G)</th>
-                        <th style="padding: 10px; border-left: 2px solid #555;">RL: Nivel (S)</th><th style="padding: 10px;">RL: Recompensa (r)</th><th style="padding: 10px;">RL: Nuevo Q(s,a)</th>
-                    </tr></thead>
-                    <tbody>${userLogs.map((l, index) => `<tr style="border-bottom: 1px solid #444;">
-                        <td style="padding: 8px;">${index + 1}</td><td style="padding: 8px;">${l.kc}</td>
-                        <td style="padding: 8px; border-left: 2px solid #555;">${l.bktParams.pL0.toFixed(2)}</td><td style="padding: 8px; color: #d4a373;">${l.bktParams.pNext.toFixed(2)}</td><td style="padding: 8px;">S:${l.bktParams.pS.toFixed(2)} | G:${l.bktParams.pG.toFixed(2)}</td>
-                        <td style="padding: 8px; border-left: 2px solid #555;">${l.algoPrediction}</td><td style="padding: 8px; color: ${l.reward > 0 ? '#4CAF50' : '#F44336'}">${l.reward.toFixed(2)}</td><td style="padding: 8px;">${l.qUpdate.toFixed(2)}</td>
+                        <td style="padding: 8px;">${l.gameId}</td>
+                        <td style="padding: 8px;">${l.kc}</td>
+                        <td style="padding: 8px;">${l["numero de intento"] || 1}</td>
+                        <td style="padding: 8px; font-weight: bold; color: ${l.isCorrect ? '#4CAF50' : '#F44336'}">${l.isCorrect ? 'Correcto' : 'Incorrecto'}</td>
+                        <td style="padding: 8px;">${l.input}</td>
+                        <td style="padding: 8px;">${l.pregunta || 'N/A'}</td>
+                        <td style="padding: 8px;">${l['respuesta correcta'] !== undefined ? l['respuesta correcta'] : (l.respuestaCorrecta !== undefined ? l.respuestaCorrecta : 'N/A')}</td>
+                        <td style="padding: 8px;">${l.responseTime}s</td>
+                        <td style="padding: 8px;">${new Date(l.timestamp).toLocaleString()}</td>
                     </tr>`).join('')}</tbody>
                 </table>
             </div>
@@ -247,11 +264,12 @@ class DashboardScene extends Phaser.Scene {
         for (let game in stats) {
             let correctPct = (stats[game].correct / stats[game].total) * 100;
             let errorPct = (stats[game].error / stats[game].total) * 100;
-            html += `<div style="display: flex; flex-direction: column; align-items: center; width: 80px;">
+            html += `<div style="display: flex; flex-direction: column; align-items: center; width: 100px;">
                 <div style="display: flex; gap: 2px; height: 100px; align-items: flex-end; margin-bottom: 5px;">
-                    <div style="width: 25px; height: ${correctPct}%; background: #4CAF50;" title="Correctos: ${stats[game].correct}"></div>
-                    <div style="width: 25px; height: ${errorPct}%; background: #F44336;" title="Errores: ${stats[game].error}"></div>
-                </div><span style="font-size: 11px; text-align: center; word-wrap: break-word; width: 100%;">${game.replace('Scene','')}</span>
+                    <div style="width: 25px; height: ${correctPct}%; background: #4CAF50; display: flex; justify-content: center; align-items: flex-start; padding-top: 4px; color: white; font-size: 11px; font-weight: bold;" title="Correctos: ${stats[game].correct}">${stats[game].correct > 0 ? stats[game].correct : ''}</div>
+                    <div style="width: 25px; height: ${errorPct}%; background: #F44336; display: flex; justify-content: center; align-items: flex-start; padding-top: 4px; color: white; font-size: 11px; font-weight: bold;" title="Errores: ${stats[game].error}">${stats[game].error > 0 ? stats[game].error : ''}</div>
+                    <div style="font-size: 10px; color: #ccc; margin-left: 4px; align-self: center; text-align: center;">Total<br><b style="font-size: 12px; color: #fff;">${stats[game].total}</b></div>
+                </div><span style="font-size: 12px; text-align: center; word-wrap: break-word; width: 100%; font-weight: bold; color: #d4a373;">${game.replace('Scene','')}</span>
             </div>`;
         }
         return html;

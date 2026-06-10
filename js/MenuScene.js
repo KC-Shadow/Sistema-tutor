@@ -51,7 +51,7 @@ class MenuScene extends Phaser.Scene {
         this.tutorialActivo = false;
 
         // Cartel Isosceles (Acceso Administrativo)
-        this.cartelIsosceles = this.add.image(-25, 625, 'cartel_isosceles').setOrigin(0, 1).setInteractive({ useHandCursor: true });
+        this.cartelIsosceles = this.add.image(-38, 638, 'cartel_isosceles').setOrigin(0, 1).setScale(0.5).setInteractive({ useHandCursor: true });
         this.cartelIsosceles.on('pointerdown', () => {
             let pwd = prompt("ACCESO ADMINISTRATIVO\nIngrese contraseña de seguridad:");
             if (pwd === "ula2026") {
@@ -74,7 +74,7 @@ class MenuScene extends Phaser.Scene {
             this.scene.start('MagoScene');
         });
         this.agregarHoverMrClaw(this.carpaMago, "Juego de Multiplicación.");
-        this.add.image(400, 195, 'cartel_mago').setOrigin(0.5, 1).setScale(0.8);
+        this.cartelMago = this.add.image(400, 195, 'cartel_mago').setOrigin(0.5, 1).setScale(0.8);
 
         // 2. Carpa para "El poligono de Diana" (Medio Izquierda)
         this.carpaPoligono = this.add.image(250, 210, 'carpa_poligono').setScale(0.85);
@@ -85,7 +85,7 @@ class MenuScene extends Phaser.Scene {
             this.scene.start('PoligonoScene');
         });
         this.agregarHoverMrClaw(this.carpaPoligono, "Juego de Suma.");
-        this.add.image(245, 255, 'cartel_poligono').setOrigin(0.5, 1).setScale(0.75);
+        this.cartelPoligono = this.add.image(245, 255, 'cartel_poligono').setOrigin(0.5, 1).setScale(0.75);
 
         // 3. Carpa para "Equilibrio de platillos" (Medio Derecha)
         this.carpaMilo = this.add.image(560, 210, 'carpa_milo').setScale(0.85).setInteractive({useHandCursor:true});
@@ -95,7 +95,7 @@ class MenuScene extends Phaser.Scene {
             this.scene.start('MiloScene');
         });
         this.agregarHoverMrClaw(this.carpaMilo, "Juego de División.");
-        this.add.image(550, 246, 'cartel_milo').setOrigin(0.5, 1).setScale(0.8);
+        this.cartelMilo = this.add.image(550, 246, 'cartel_milo').setOrigin(0.5, 1).setScale(0.8);
 
         // 4. Carpa para "La Taquilla de Pepe" (Abajo Izquierda)
         this.carpaPepe = this.add.image(100, 300, 'carpa_pepe').setInteractive({ useHandCursor: true }).setScale(0.64);
@@ -105,7 +105,7 @@ class MenuScene extends Phaser.Scene {
             this.scene.start('TaquillaScene'); // Cambiar a la escena del juego de Pepe
         });
         this.agregarHoverMrClaw(this.carpaPepe, "Juego de Resta.");
-        this.add.image(100, 331, 'cartel_pepe').setOrigin(0.5, 1).setScale(0.8);
+        this.cartelPepe = this.add.image(100, 331, 'cartel_pepe').setOrigin(0.5, 1).setScale(0.8);
 
         // 5. Carpa para "Dagas al aire" (Abajo Derecha)
         this.carpaDante = this.add.image(700, 300, 'carpa_dante').setScale(0.85);
@@ -116,7 +116,7 @@ class MenuScene extends Phaser.Scene {
             this.scene.start('DagasScene');
         });
         this.agregarHoverMrClaw(this.carpaDante, "Juego Final.");
-        this.add.image(700, 331, 'cartel_dante').setOrigin(0.5, 1).setScale(0.8);
+        this.cartelDante = this.add.image(700, 331, 'cartel_dante').setOrigin(0.5, 1).setScale(0.8);
 
         // 6. Carpa para el "Perfil del Jugador" (Abajo Centro)
         this.carpaPerfil = this.add.image(400, 330, 'carpa_perfil').setInteractive({ useHandCursor: true }).setScale(1);
@@ -133,16 +133,30 @@ class MenuScene extends Phaser.Scene {
         });
 
         // Controlar si el tutorial de Mr Claw se reproduce o no
-        if (!localStorage.getItem('currentUser')) {
-            this.tutorialActivo = true;
-            this.iniciarTutorial(); // Si no hay usuario, habla Mr. Claw
-        } else {
-            this.nubeClaw.setVisible(false); // Ocultar el diálogo de Mr. Claw
-            this.txtClaw.setVisible(false);
-            this.activarJuegos(); // Activar los juegos directamente
-        }
+        let currentUserStr = localStorage.getItem('currentUser');
+        let userObj = currentUserStr ? JSON.parse(currentUserStr) : null;
+        this.tutorialActivo = true;
+        this.iniciarTutorial(userObj); // Habla Mr. Claw dependiendo de si hay usuario
 
         this.actualizarUIUsuario();
+        
+        // Agregar el botón de mute en la esquina superior izquierda
+        this.crearBotonMute();
+    }
+
+    crearBotonMute() {
+        let isMuted = this.sound.mute;
+        let textoMute = isMuted ? "🔇 SIN AUDIO" : "🔊 AUDIO";
+        
+        this.btnMute = this.add.text(20, 20, textoMute, {
+            fontFamily: 'Courier New', fontSize: '18px', fill: '#fff', 
+            backgroundColor: '#3d2622', padding: { x: 10, y: 5 }, fontStyle: 'bold'
+        }).setInteractive({ useHandCursor: true }).setDepth(100);
+
+        this.btnMute.on('pointerdown', () => {
+            this.sound.mute = !this.sound.mute;
+            this.btnMute.setText(this.sound.mute ? "🔇 MUTE" : "🔊 AUDIO");
+        });
     }
 
     agregarHoverMrClaw(carpa, texto) {
@@ -151,7 +165,10 @@ class MenuScene extends Phaser.Scene {
                 this.nubeClaw.setVisible(true);
                 this.txtClaw.setVisible(true);
                 this.txtClaw.setText(texto);
-                window.TTSManager.speak(texto, 'MrClaw');
+                if (this.musica) this.musica.setVolume(0.1);
+                window.TTSManager.speak(texto, 'MrClaw', () => {
+                    if (this.musica && !this.tutorialActivo) this.musica.setVolume(0.5);
+                });
             }
         });
         carpa.on('pointerout', () => {
@@ -160,11 +177,18 @@ class MenuScene extends Phaser.Scene {
                 this.txtClaw.setVisible(false);
                 this.txtClaw.setText('');
                 window.TTSManager.stop();
+                if (this.musica) this.musica.setVolume(0.5);
             }
         });
     }
 
-    iniciarTutorial() {
+    iniciarTutorial(user) {
+        this.nubeClaw.setVisible(true);
+        this.txtClaw.setVisible(true);
+        
+        // Establecer visualmente la opacidad de los juegos bloqueados/no jugados
+        this.activarJuegos();
+
         // Desactivar interacción con las carpas durante el tutorial
         this.carpaPepe.disableInteractive();
         this.carpaDante.disableInteractive();
@@ -175,12 +199,58 @@ class MenuScene extends Phaser.Scene {
         // Bajar volumen de la música durante el tutorial
         if (this.musica) this.musica.setVolume(0.1);
 
-        const frases = [
-            "¡Bienvenido al Circo Isósceles!",
-            "Soy Mr. Claw, el dueño de este lugar.",
-            "Antes de iniciar a jugar, debes iniciar sesión o crear un perfil nuevo.",
-            "Ve a la carpa con el cartel de perfil para identificarte."
-        ];
+        let frases = [];
+        if (user) {
+            let jugados = JSON.parse(localStorage.getItem('juegosJugados')) || {};
+            let userJugados = jugados[user.id] || [];
+
+            if (userJugados.includes('DagasScene')) {
+                frases = [
+                    `¡Felicidades, ${user.nombre}!`,
+                    "Has completado todos los minijuegos del circo.",
+                    "Puedes volver a jugar el que más te guste."
+                ];
+            } else if (userJugados.includes('MiloScene')) {
+                frases = [
+                    `¡Gran trabajo, ${user.nombre}!`,
+                    "Solo te falta el último reto.",
+                    "Ingresa a la carpa de Dagas al Aire para jugar el juego final."
+                ];
+            } else if (userJugados.includes('MagoScene')) {
+                frases = [
+                    `¡Sigue así, ${user.nombre}!`,
+                    "Ahora es el turno del juego de división.",
+                    "Ingresa a la carpa del Equilibrista Milo."
+                ];
+            } else if (userJugados.includes('PoligonoScene')) {
+                frases = [
+                    `¡Muy bien, ${user.nombre}!`,
+                    "Es hora del juego de multiplicación.",
+                    "Ingresa a la carpa del Mago Zandor."
+                ];
+            } else if (userJugados.includes('TaquillaScene')) {
+                frases = [
+                    `¡Excelente, ${user.nombre}!`,
+                    "Continuemos con el juego de sumas.",
+                    "Ingresa a la carpa del Polígono de Diana."
+                ];
+            } else {
+                frases = [
+                    `¡Excelente, ${user.nombre}!`,
+                    "Empecemos con el primer juego.",
+                    "Ingresa a la Taquilla de Pepe."
+                ];
+            }
+        } else {
+            frases = [
+                "¡Bienvenido al Circo Isósceles!",
+                "Soy Mr. Claw, el dueño de este lugar.",
+                "Antes de empezar, ingresa a la carpa del perfil.",
+                "Si ingresas por primera vez, crea tu perfil.",
+                "Si ya tienes uno, inicia sesión."
+            ];
+        }
+        
         let paso = 0;
         this.txtClaw.setText(frases[paso]);
 
@@ -252,11 +322,10 @@ class MenuScene extends Phaser.Scene {
 
     activarJuegos() {
         const currentUserStr = localStorage.getItem('currentUser');
-        if (!currentUserStr) return;
-        const currentUser = JSON.parse(currentUserStr);
+        const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
 
         let jugados = JSON.parse(localStorage.getItem('juegosJugados')) || {};
-        let userJugados = jugados[currentUser.id] || [];
+        let userJugados = currentUser ? (jugados[currentUser.id] || []) : [];
 
         // Ruta establecida
         const ordenJuegos = ['TaquillaScene', 'PoligonoScene', 'MagoScene', 'MiloScene', 'DagasScene'];
@@ -264,12 +333,19 @@ class MenuScene extends Phaser.Scene {
             'TaquillaScene': this.carpaPepe, 'PoligonoScene': this.carpaPoligono,
             'MagoScene': this.carpaMago, 'MiloScene': this.carpaMilo, 'DagasScene': this.carpaDante
         };
+        const carteles = {
+            'TaquillaScene': this.cartelPepe, 'PoligonoScene': this.cartelPoligono,
+            'MagoScene': this.cartelMago, 'MiloScene': this.cartelMilo, 'DagasScene': this.cartelDante
+        };
 
         // Calcular hasta qué nivel tiene permitido entrar
-        let nivelActual = 0;
-        for (let i = 0; i < ordenJuegos.length; i++) {
-            if (userJugados.includes(ordenJuegos[i])) nivelActual = i + 1; // Desbloquea el siguiente
-            else break; // Frena en el primero que no haya completado
+        let nivelActual = -1;
+        if (currentUser) {
+            nivelActual = 0;
+            for (let i = 0; i < ordenJuegos.length; i++) {
+                if (userJugados.includes(ordenJuegos[i])) nivelActual = i + 1; // Desbloquea el siguiente
+                else break; // Frena en el primero que no haya completado
+            }
         }
 
         // Configurar interactividad y visibilidad
@@ -277,9 +353,11 @@ class MenuScene extends Phaser.Scene {
             if (index <= nivelActual) {
                 carpas[gameId].setInteractive({ useHandCursor: true });
                 carpas[gameId].setAlpha(1); // Juego activo (sin opacidad)
+                carteles[gameId].setAlpha(1); 
             } else {
                 carpas[gameId].disableInteractive();
                 carpas[gameId].setAlpha(0.5); // Juego inactivo (opaco)
+                carteles[gameId].setAlpha(0.5);
             }
         });
     }
@@ -377,11 +455,12 @@ class MenuScene extends Phaser.Scene {
             
             if (found) {
                 localStorage.setItem('currentUser', JSON.stringify(found));
-                alert("¡Bienvenido al Circo, " + found.nombre + "!");
                 loginContainer.remove();
                 this.activarJuegos();
                 this.desbloquearCarpas();
                 this.actualizarUIUsuario();
+                this.tutorialActivo = true;
+                this.iniciarTutorial(found);
             } else {
                 alert("Usuario o contraseña incorrectos. Inténtalo de nuevo.");
             }
@@ -460,7 +539,7 @@ class MenuScene extends Phaser.Scene {
         this.userUIContainer.add(txtScore);
 
         // Círculos de progreso
-        const games = ['TaquillaScene', 'DagasScene', 'PoligonoScene', 'MiloScene', 'MagoScene'];
+        const games = ['TaquillaScene', 'PoligonoScene', 'MagoScene', 'MiloScene', 'DagasScene'];
         let jugados = JSON.parse(localStorage.getItem('juegosJugados')) || {};
         let userJugados = jugados[currentUser.id] || [];
 

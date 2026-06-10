@@ -64,18 +64,18 @@ class TaquillaScene extends Phaser.Scene {
     create() {
         // Fondo y Mostrador
         this.add.image(400, 300, 'fondo_carpa_pepe').setScale(0.8);
-        this.add.image(10, -30, 'cartelera_2').setOrigin(0, 0).setScale(0.4);
+        this.cartelera_2 = this.add.image(10, -30, 'cartelera_2').setOrigin(0, 0).setScale(0.4);
         
         // Cartelera Derecha (Tiempo y Puntos)
-        this.add.image(550, -30, 'cartelera').setOrigin(0, 0).setScale(0.4);
-        this.txtVentas = this.add.text(600, 80, 'CLIENTES: 0/6', { fontFamily: 'Playbill', fontSize: '30px', fill: '#000000', fontWeight: 'bold' }).setAngle(-9);
+        this.cartelera = this.add.image(550, -30, 'cartelera').setOrigin(0, 0).setScale(0.4);
+        this.txtVentas = this.add.text(600, 80, 'RONDAS: 1/6', { fontFamily: 'Playbill', fontSize: '30px', fill: '#000000', fontWeight: 'bold' }).setAngle(-9);
         this.txtPuntos = this.add.text(600, 120, 'PUNTOS: 0', { fontFamily: 'Playbill', fontSize: '40px', fill: '#000000', fontWeight: 'bold' }).setAngle(-9);
 
         // Clientes
         this.cliente = this.add.image(390, 400, 'cliente_conejo').setScale(0.6).setAlpha(0);
         
         // Mostrador
-        this.add.image(400, 525, 'mostrador');
+        this.mostrador = this.add.image(400, 525, 'mostrador');
 
         // Sonido de fondo
         this.musica = this.sound.add('musica_fondo', { loop: true, volume: 0.1 });
@@ -135,7 +135,21 @@ class TaquillaScene extends Phaser.Scene {
         this.iniciarTutorialResta();
     }
 
+    opacarJuego(opacar) {
+        let alpha = opacar ? 0.3 : 1;
+        if (this.cartelera_2) this.cartelera_2.setAlpha(alpha);
+        if (this.cartelera) this.cartelera.setAlpha(alpha);
+        if (this.txtVentas) this.txtVentas.setAlpha(alpha);
+        if (this.txtPuntos) this.txtPuntos.setAlpha(alpha);
+        if (this.mostrador) this.mostrador.setAlpha(alpha);
+        if (this.registradora) this.registradora.setAlpha(alpha);
+        if (this.palanca) this.palanca.setAlpha(alpha);
+        if (this.txtPantalla) this.txtPantalla.setAlpha(alpha);
+        if (this.btnVolver) this.btnVolver.setAlpha(alpha);
+    }
+
     iniciarTutorialResta() {
+        this.opacarJuego(true);
         this.nube.setVisible(true);
         this.txtPepe.setVisible(true);
         this.pepe.setVisible(true);
@@ -288,6 +302,7 @@ class TaquillaScene extends Phaser.Scene {
                 duration: 500,
                 onComplete: () => {
                     this.pepe.setVisible(false);
+                    this.opacarJuego(false);
                     this.iniciarCuentaRegresiva();
                 }
             });
@@ -440,6 +455,18 @@ class TaquillaScene extends Phaser.Scene {
             });
             this.monedasVueltoContainer.add(m);
         });
+
+        // Botón Borrar Vuelto (Agregado al mismo contenedor para que solo se vea con la caja abierta)
+        this.btnBorrar = this.add.text(515, 440, 'BORRAR', { 
+            fontFamily: 'Courier New', fontSize: '16px', fill: '#000', backgroundColor: '#ff0000', fontStyle: 'bold', padding: { x: 8, y: 4 } 
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.btnBorrar.on('pointerdown', () => {
+            if (this.registradora.texture.key === 'reg_abierta') {
+                this.vueltoEntregado = 0;
+                this.txtPantalla.setText(`TOTAL: ${this.montoTotal}.00\nVUELTO: 0.00`);
+            }
+        });
+        this.monedasVueltoContainer.add(this.btnBorrar);
     }
 
     abrirCaja() {
@@ -470,7 +497,8 @@ class TaquillaScene extends Phaser.Scene {
         if (currentUser) {
             window.LearningAgent.logInteraction(
                 currentUser.id, 'TaquillaScene', 'Resta Monetaria', 'Dificultad_Normal', 
-                esCorrecto, this.vueltoEntregado, timeElapsed
+                esCorrecto, this.vueltoEntregado, timeElapsed,
+                `${this.pagoCliente} - ${this.montoTotal}`, this.vueltoCorrecto
             );
         }
 
@@ -484,7 +512,8 @@ class TaquillaScene extends Phaser.Scene {
         }
         
         this.ventasRealizadas++;
-        this.txtVentas.setText(`CLIENTES: ${this.ventasRealizadas}/${this.maxVentas}`);
+        let rondaMostrada = this.ventasRealizadas < this.maxVentas ? this.ventasRealizadas + 1 : this.maxVentas;
+        this.txtVentas.setText(`RONDAS: ${rondaMostrada}/${this.maxVentas}`);
 
         // Ocultar las monedas ANTES de que la caja se cierre visualmente
         this.monedasVueltoContainer.setAlpha(0); 

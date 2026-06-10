@@ -10,9 +10,9 @@ class PoligonoScene extends Phaser.Scene {
         this.sumaActual = { a: 0, b: 0, resultado: 0 };
         this.rondaActiva = false;
         
-        // Sistema de Munición
-        this.balasMaximas = 6; // Límite de 6 rondas de tiros
-        this.balasRestantes = this.balasMaximas;
+        // Sistema de Rondas
+        this.rondaActual = 0;
+        this.maxRondas = 6; // Límite de 6 rondas
 
         // Grupos y Listas
         this.figurasGroup = null; 
@@ -60,7 +60,7 @@ class PoligonoScene extends Phaser.Scene {
     create() {
         // UI
         this.add.image(400, 250, 'fondo_p').setScale(1);
-        this.add.image(350, 290, 'galeria_p').setScale(0.90); // Escala aumentada a 0.90
+        this.galeria = this.add.image(320, 290, 'galeria_p').setScale(0.95); // Escala aumentada a 1.08
 
         // Diana y Nube de Diálogo
         this.diana = this.add.image(730, 500, 'diana_p').setScale(0.35);
@@ -74,10 +74,10 @@ class PoligonoScene extends Phaser.Scene {
         this.arma = this.physics.add.sprite(100, 550, 'arma_p').setScale(0.6).setOrigin(0.5, 0.5);
 
         // Cartelera
-        this.add.image(690, 90, 'cartelera').setScale(0.4).setDepth(10);
+        this.cartelera = this.add.image(690, 90, 'cartelera').setScale(0.4).setDepth(10);
 
         // Interfaz de Usuario
-        this.txtBalas = this.add.text(670, 90, `TIROS: ${this.balasRestantes}`, { fontFamily: 'Playbill', fontSize: '36px', fill: '#000000' }).setOrigin(0.5).setAngle(-9).setDepth(10);
+        this.txtRondas = this.add.text(670, 90, `RONDAS: 1/${this.maxRondas}`, { fontFamily: 'Playbill', fontSize: '36px', fill: '#000000' }).setOrigin(0.5).setAngle(-9).setDepth(10);
         this.txtPuntos = this.add.text(670, 130, 'PUNTOS: 0', { fontFamily: 'Playbill', fontSize: '36px', fill: '#000000' }).setOrigin(0.5).setAngle(-9).setDepth(10);
 
         // Botón Volver
@@ -100,7 +100,18 @@ class PoligonoScene extends Phaser.Scene {
         this.iniciarTutorialSuma();
     }
 
+    opacarJuego(opacar) {
+        let alpha = opacar ? 0.3 : 1;
+        if (this.galeria) this.galeria.setAlpha(alpha);
+        if (this.cartelera) this.cartelera.setAlpha(alpha);
+        if (this.txtRondas) this.txtRondas.setAlpha(alpha);
+        if (this.txtPuntos) this.txtPuntos.setAlpha(alpha);
+        if (this.arma) this.arma.setAlpha(alpha);
+        if (this.btnVolver) this.btnVolver.setAlpha(alpha);
+    }
+
     iniciarTutorialSuma() {
+        this.opacarJuego(true);
         this.dialogo.setVisible(true);
         this.txtInstruccion.setVisible(true);
 
@@ -245,6 +256,7 @@ class PoligonoScene extends Phaser.Scene {
             this.txtInstruccion.setStyle({ fontSize: '22px', fill: '#0f0', wordWrap: null });
             this.txtInstruccion.setText('');
             
+            this.opacarJuego(false);
             this.iniciarCuentaRegresiva();
         };
 
@@ -292,19 +304,21 @@ class PoligonoScene extends Phaser.Scene {
 
         // Envolver (wrap) las figuras al llegar a la pared izquierda hacia la derecha
         this.figurasGroup.getChildren().forEach(figura => {
-            if (figura.x < 140) { // Límite de la pared izquierda ajustado al nuevo tamaño
-                figura.x += 420;  // Salto exacto al límite derecho (140 + 420 = 560) para mantener la distancia perfecta
+            if (figura.x < 98) { // Límite de la pared izquierda ajustado a la nueva separación
+                figura.x += 504;  // Salto exacto al límite derecho (98 + 504 = 602) para mantener la distancia perfecta
             }
         });
     }
 
     iniciarNuevaRonda() {
-        if (this.balasRestantes <= 0) {
+        if (this.rondaActual >= this.maxRondas) {
             this.finalizarJuego();
             return;
         }
 
+        this.rondaActual++;
         this.rondaActiva = true;
+        this.txtRondas.setText(`RONDAS: ${this.rondaActual}/${this.maxRondas}`);
         this.figurasGroup.clear(true, true);
 
         // Generar suma asegurando que no se repita la anterior
@@ -343,15 +357,15 @@ class PoligonoScene extends Phaser.Scene {
 
         Phaser.Utils.Array.Shuffle(seleccion);
 
-        const filasY = [210, 280, 350]; // Alturas de las 3 filas más separadas
-        const columnasX = [210, 350, 490]; // Centradas en la galería (X=350) con mayor separación horizontal
+        const filasY = [196, 280, 364]; // Alturas de las 3 filas más separadas (20% más)
+        const columnasX = [182, 350, 518]; // Centradas en la galería (X=350) con mayor separación horizontal (20% más)
 
         let i = 0;
         filasY.forEach(y => {
             columnasX.forEach(x => {
                 let valor = seleccion[i];
                 let numStr = valor.toString().padStart(3, '0');
-                let fig = this.figurasGroup.create(x, y, `dp_${numStr}`).setScale(0.5);
+                let fig = this.figurasGroup.create(x, y, `dp_${numStr}`).setScale(0.325);
                 
                 fig.setData('valor', valor);
                 fig.setVelocity(-100, 0); // Velocidad constante para que nunca se superpongan
@@ -362,10 +376,7 @@ class PoligonoScene extends Phaser.Scene {
     }
 
     disparar(pointer) {
-        if (!this.juegoActivo || !this.rondaActiva || this.balasRestantes <= 0) return;
-
-        this.balasRestantes--;
-        this.txtBalas.setText(`TIROS: ${this.balasRestantes}`);
+        if (!this.juegoActivo || !this.rondaActiva) return;
 
         // Detener la voz si el jugador dispara rápido y restaurar la música
         window.TTSManager.stop();
@@ -414,7 +425,8 @@ class PoligonoScene extends Phaser.Scene {
         if (currentUser) {
             window.LearningAgent.logInteraction(
                 currentUser.id, 'PoligonoScene', 'Suma', 'Dificultad_Normal', 
-                esCorrecto, valorImpactado, timeElapsed
+                esCorrecto, valorImpactado, timeElapsed,
+                `${this.sumaActual.a} + ${this.sumaActual.b}`, this.sumaActual.resultado
             );
         }
 
@@ -438,16 +450,29 @@ class PoligonoScene extends Phaser.Scene {
     }
 
     finalizarJuego() {
+        this.juegoActivo = false;
         this.rondaActiva = false;
         this.physics.pause();
-        window.TTSManager.stop();
-        this.add.rectangle(400, 300, 800, 600, 0x000000, 0.7);
-        this.add.text(400, 300, `FIN DEL JUEGO\nPuntos: ${this.puntuacion}`, { 
-            fontFamily: 'Courier New', fontSize: '40px', fill: '#f00', align: 'center' 
-        }).setOrigin(0.5);
+        this.btnVolver.setVisible(false);
 
-        this.time.delayedCall(3000, () => {
+        // Ocultar elementos de juego
+        this.diana.setAlpha(0);
+        this.dialogo.setAlpha(0);
+        this.txtInstruccion.setAlpha(0);
+        this.arma.setAlpha(0);
+
+        // Pantalla de fin de juego
+        this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
+        this.add.text(400, 250, '¡FIN DEL JUEGO!', { fontFamily: 'Courier New', fontSize: '56px', fill: '#f00', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(400, 350, `Puntuación Final: ${this.puntuacion}`, { fontFamily: 'Courier New', fontSize: '32px', fill: '#d4a373' }).setOrigin(0.5);
+
+        const btnVolverMenu = this.add.text(400, 480, 'Volver al Menú', { 
+            fontFamily: 'Courier New', fontSize: '24px', fill: '#fff', backgroundColor: '#3d2622', padding: 10 
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        btnVolverMenu.on('pointerdown', () => {
             this.sound.stopAll();
+            window.TTSManager.stop();
             this.scene.start('MenuScene');
         });
     }

@@ -165,7 +165,7 @@ window.LearningAgent = {
         return { prediction: stateCategory, reward: reward, qUpdate: qNew };
     },
 
-    logInteraction: function(userId, gameId, kc, action, isCorrect, inputVal, responseTime) {
+    logInteraction: function(userId, gameId, kc, action, isCorrect, inputVal, responseTime, pregunta, respuestaCorrecta) {
         let initialState = this.getKnowledgeState(userId, kc);
         
         // Heurística de "Muy fácil": Si responde correctamente en menos de 2.5 segundos
@@ -181,6 +181,8 @@ window.LearningAgent = {
             tutorAction: action, 
             isCorrect, 
             input: inputVal, 
+            pregunta: pregunta,
+            respuestaCorrecta: respuestaCorrecta,
             responseTime: parseFloat(responseTime.toFixed(2)), 
             algoPrediction: rlResult.prediction, 
             reward: rlResult.reward, 
@@ -191,6 +193,10 @@ window.LearningAgent = {
         localStorage.setItem('gameLogs', JSON.stringify(logs));
     }
 };
+
+// Forzar que no haya sesión iniciada al recargar la página
+// Esto asegura que Mr. Claw siempre dé la bienvenida inicial
+localStorage.removeItem('currentUser');
 
 const config = {
     type: Phaser.CANVAS, 

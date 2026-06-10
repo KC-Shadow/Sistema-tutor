@@ -45,12 +45,12 @@ class MagoScene extends Phaser.Scene {
     create() {
         // Escenario
         this.add.image(400, 250, 'fondo_zandor').setScale(0.39);
-        this.add.image(690, 90, 'cartelera_z').setScale(0.4);
+        this.cartelera_z = this.add.image(690, 90, 'cartelera_z').setScale(0.4);
         
         // Taburetes (Estáticos)
-        this.add.image(280, 298, 'taburete').setScale(0.3375);
-        this.add.image(400, 298, 'taburete').setScale(0.3375);
-        this.add.image(520, 298, 'taburete').setScale(0.3375);
+        this.taburete1 = this.add.image(280, 298, 'taburete').setScale(0.3375);
+        this.taburete2 = this.add.image(400, 298, 'taburete').setScale(0.3375);
+        this.taburete3 = this.add.image(520, 298, 'taburete').setScale(0.3375);
 
         // Zandor y Diálogo
         this.zandor = this.add.image(100, 550, 'zandor').setScale(0.5);
@@ -61,13 +61,24 @@ class MagoScene extends Phaser.Scene {
 
         // Grupo de Sombreros e Interfaz
         this.sombrerosGroup = this.add.group();
-        this.txtRondas = this.add.text(680, 90, 'RONDA: 0/6', { fontFamily: 'Playbill', fontSize: '36px', fill: '#000' }).setOrigin(0.5).setAngle(-9);
+        this.txtRondas = this.add.text(680, 90, 'RONDAS: 1/6', { fontFamily: 'Playbill', fontSize: '36px', fill: '#000' }).setOrigin(0.5).setAngle(-9);
         this.txtPuntos = this.add.text(680, 130, 'PUNTOS: 0', { fontFamily: 'Playbill', fontSize: '40px', fill: '#000' }).setOrigin(0.5).setAngle(-9);
 
         this.iniciarTutorialMultiplicacion();
     }
 
+    opacarJuego(opacar) {
+        let alpha = opacar ? 0.3 : 1;
+        if (this.cartelera_z) this.cartelera_z.setAlpha(alpha);
+        if (this.txtRondas) this.txtRondas.setAlpha(alpha);
+        if (this.txtPuntos) this.txtPuntos.setAlpha(alpha);
+        if (this.taburete1) this.taburete1.setAlpha(alpha);
+        if (this.taburete2) this.taburete2.setAlpha(alpha);
+        if (this.taburete3) this.taburete3.setAlpha(alpha);
+    }
+
     iniciarTutorialMultiplicacion() {
+        this.opacarJuego(true);
         this.nube.setVisible(true);
         this.txtPregunta.setVisible(true);
 
@@ -188,6 +199,7 @@ class MagoScene extends Phaser.Scene {
             btnSaltar.destroy();
             this.nube.setVisible(false);
             this.txtPregunta.setVisible(false);
+            this.opacarJuego(false);
             this.iniciarNuevaRonda();
         };
 
@@ -216,7 +228,7 @@ class MagoScene extends Phaser.Scene {
 
         this.rondaActual++;
         this.rondaActiva = true;
-        this.txtRondas.setText(`RONDA: ${this.rondaActual}/${this.maxRondas}`);
+        this.txtRondas.setText(`RONDAS: ${this.rondaActual}/${this.maxRondas}`);
         this.sombrerosGroup.clear(true, true);
 
         // Generar Multiplicación
@@ -248,7 +260,7 @@ class MagoScene extends Phaser.Scene {
             }
 
             let numStr = valor.toString().padStart(3, '0');
-            let sombrero = this.add.image(posX, 230, `s_${numStr}`).setScale(0.055).setInteractive({ useHandCursor: true });
+            let sombrero = this.add.image(posX, 230, `s_${numStr}`).setScale(0.5).setInteractive({ useHandCursor: true });
             
             sombrero.setData('valor', valor);
             sombrero.on('pointerdown', () => this.verificarRespuesta(sombrero));
@@ -268,7 +280,8 @@ class MagoScene extends Phaser.Scene {
         if (currentUser) {
             window.LearningAgent.logInteraction(
                 currentUser.id, 'MagoScene', 'Multiplicación Avanzada', 'Dificultad_Normal', 
-                esCorrecto, valorSeleccionado, timeElapsed
+                esCorrecto, valorSeleccionado, timeElapsed,
+                `${this.multiplicacionActual.a} x ${this.multiplicacionActual.b}`, this.multiplicacionActual.producto
             );
         }
 
@@ -278,7 +291,7 @@ class MagoScene extends Phaser.Scene {
             this.txtPuntos.setText(`PUNTOS: ${this.puntuacion}`);
             
             // Cambia a conejo
-            sombrero.setTexture('conejo_sombrero').setScale(0.35);
+            sombrero.setTexture('conejo_sombrero').setScale(0.5);
             sombrero.setY(sombrero.y);
             sombrero.setOrigin(0.45, 0.75); 
             
@@ -298,7 +311,27 @@ class MagoScene extends Phaser.Scene {
     }
 
     finalizarJuego() {
-        window.TTSManager.stop();
-        this.scene.start('MenuScene');
+        this.juegoActivo = false;
+        this.rondaActiva = false;
+
+        // Ocultar elementos de juego
+        this.zandor.setAlpha(0);
+        this.nube.setAlpha(0);
+        this.txtPregunta.setAlpha(0);
+
+        // Pantalla de fin de juego
+        this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
+        this.add.text(400, 250, '¡FIN DEL JUEGO!', { fontFamily: 'Courier New', fontSize: '56px', fill: '#f00', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(400, 350, `Puntuación Final: ${this.puntuacion}`, { fontFamily: 'Courier New', fontSize: '32px', fill: '#d4a373' }).setOrigin(0.5);
+
+        const btnVolverMenu = this.add.text(400, 480, 'Volver al Menú', { 
+            fontFamily: 'Courier New', fontSize: '24px', fill: '#fff', backgroundColor: '#3d2622', padding: 10 
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+        btnVolverMenu.on('pointerdown', () => {
+            this.sound.stopAll();
+            window.TTSManager.stop();
+            this.scene.start('MenuScene');
+        });
     }
 }
