@@ -42,6 +42,18 @@ class MenuScene extends Phaser.Scene {
 
         // Musica del Menu
         this.load.audio('musica_menu', 'assets/music/circus_menu.mp3');
+
+        // Audios de tutor (Mr Claw)
+        for (let i = 1; i <= 5; i++) {
+            this.load.audio(`claw_bienvenida_00${i}`, `assets/audios_tutor/mrclaw_audios/bienvenida/audio_00${i}.wav`);
+        }
+        for (let i = 1; i <= 4; i++) {
+            this.load.audio(`claw_guia_00${i}`, `assets/audios_tutor/mrclaw_audios/guia/guia_00${i}.wav`);
+        }
+        for (let i = 1; i <= 5; i++) {
+            this.load.audio(`claw_guia_j${i}_001`, `assets/audios_tutor/mrclaw_audios/guia/guia_j${i}_001.wav`);
+            this.load.audio(`claw_guia_j${i}_002`, `assets/audios_tutor/mrclaw_audios/guia/guia_j${i}_002.wav`);
+        }
     }
 
     create() {
@@ -140,23 +152,22 @@ class MenuScene extends Phaser.Scene {
 
         this.actualizarUIUsuario();
         
-        // Agregar el botón de mute en la esquina superior izquierda
-        this.crearBotonMute();
     }
 
-    crearBotonMute() {
-        let isMuted = this.sound.mute;
-        let textoMute = isMuted ? "🔇 SIN AUDIO" : "🔊 AUDIO";
+    // Función de apoyo para reproducir audios de forma segura
+    reproducirAudioTutor(llaveAudio) {
+        if (this.audioTutor) {
+            this.audioTutor.stop();
+            this.audioTutor.destroy(); // Libera la memoria del audio anterior
+        }
+        if (!llaveAudio) return; // Si no hay audio asignado, no reproduce nada (útil para la felicitación final)
         
-        this.btnMute = this.add.text(20, 20, textoMute, {
-            fontFamily: 'Courier New', fontSize: '18px', fill: '#fff', 
-            backgroundColor: '#3d2622', padding: { x: 10, y: 5 }, fontStyle: 'bold'
-        }).setInteractive({ useHandCursor: true }).setDepth(100);
-
-        this.btnMute.on('pointerdown', () => {
-            this.sound.mute = !this.sound.mute;
-            this.btnMute.setText(this.sound.mute ? "🔇 MUTE" : "🔊 AUDIO");
-        });
+        if (this.cache.audio.exists(llaveAudio)) {
+            this.audioTutor = this.sound.add(llaveAudio, { volume: 1 });
+            this.audioTutor.play();
+        } else {
+            console.error(`🚨 ERROR: No se encontró o no se pudo cargar el audio '${llaveAudio}'. Revisa la ruta, el formato y la consola de red.`);
+        }
     }
 
     agregarHoverMrClaw(carpa, texto) {
@@ -165,10 +176,6 @@ class MenuScene extends Phaser.Scene {
                 this.nubeClaw.setVisible(true);
                 this.txtClaw.setVisible(true);
                 this.txtClaw.setText(texto);
-                if (this.musica) this.musica.setVolume(0.1);
-                window.TTSManager.speak(texto, 'MrClaw', () => {
-                    if (this.musica && !this.tutorialActivo) this.musica.setVolume(0.5);
-                });
             }
         });
         carpa.on('pointerout', () => {
@@ -176,8 +183,6 @@ class MenuScene extends Phaser.Scene {
                 this.nubeClaw.setVisible(false);
                 this.txtClaw.setVisible(false);
                 this.txtClaw.setText('');
-                window.TTSManager.stop();
-                if (this.musica) this.musica.setVolume(0.5);
             }
         });
     }
@@ -203,58 +208,75 @@ class MenuScene extends Phaser.Scene {
         if (user) {
             let jugados = JSON.parse(localStorage.getItem('juegosJugados')) || {};
             let userJugados = jugados[user.id] || [];
+            let userSessions = JSON.parse(localStorage.getItem('userSessions')) || {};
+            let sessionCount = userSessions[user.id] || 1;
 
             if (userJugados.includes('DagasScene')) {
-                frases = [
-                    `¡Felicidades, ${user.nombre}!`,
-                    "Has completado todos los minijuegos del circo.",
-                    "Puedes volver a jugar el que más te guste."
-                ];
+                if (user.username === 'admin') {
+                    frases = [
+                        { texto: "¡Felicidades!", audio: null },
+                        { texto: "Has completado todos los minijuegos del circo.", audio: null },
+                        { texto: "Puedes volver a jugar el que más te guste.", audio: null }
+                    ];
+                } else {
+                    frases = [
+                        { texto: "¡Felicidades!", audio: null },
+                        { texto: "Has completado todos los minijuegos del circo.", audio: null },
+                        { texto: "Gracias por participar en esta aventura.", audio: null }
+                    ];
+                }
             } else if (userJugados.includes('MiloScene')) {
-                frases = [
-                    `¡Gran trabajo, ${user.nombre}!`,
-                    "Solo te falta el último reto.",
-                    "Ingresa a la carpa de Dagas al Aire para jugar el juego final."
-                ];
+                if (user.username !== 'admin' && sessionCount < 2) {
+                    frases = [
+                        { texto: "¡Gran trabajo!", audio: 'claw_guia_002' },
+                        { texto: "Has completado la primera sesión.", audio: null },
+                        { texto: "Vuelve pronto para jugar el reto final.", audio: null }
+                    ];
+                } else {
+                    frases = [
+                        { texto: "¡Gran trabajo!", audio: 'claw_guia_002' },
+                        { texto: "Solo te falta el último reto.", audio: 'claw_guia_j5_001' },
+                        { texto: "Ingresa a la carpa de Dagas al Aire para jugar el juego final.", audio: 'claw_guia_j5_002' }
+                    ];
+                }
             } else if (userJugados.includes('MagoScene')) {
                 frases = [
-                    `¡Sigue así, ${user.nombre}!`,
-                    "Ahora es el turno del juego de división.",
-                    "Ingresa a la carpa del Equilibrista Milo."
+                    { texto: "¡Sigue así!", audio: 'claw_guia_003' },
+                    { texto: "Ahora es el turno del juego de división.", audio: 'claw_guia_j4_001' },
+                    { texto: "Ingresa a la carpa del Equilibrista Milo.", audio: 'claw_guia_j4_002' }
                 ];
             } else if (userJugados.includes('PoligonoScene')) {
                 frases = [
-                    `¡Muy bien, ${user.nombre}!`,
-                    "Es hora del juego de multiplicación.",
-                    "Ingresa a la carpa del Mago Zandor."
+                    { texto: "¡Muy bien!", audio: 'claw_guia_004' },
+                    { texto: "Es hora del juego de multiplicación.", audio: 'claw_guia_j3_001' },
+                    { texto: "Ingresa a la carpa del Mago Zandor.", audio: 'claw_guia_j3_002' }
                 ];
             } else if (userJugados.includes('TaquillaScene')) {
                 frases = [
-                    `¡Excelente, ${user.nombre}!`,
-                    "Continuemos con el juego de sumas.",
-                    "Ingresa a la carpa del Polígono de Diana."
+                    { texto: "¡Excelente!", audio: 'claw_guia_001' },
+                    { texto: "Continuemos con el juego de sumas.", audio: 'claw_guia_j2_001' },
+                    { texto: "Ingresa a la carpa del Polígono de Diana.", audio: 'claw_guia_j2_002' }
                 ];
             } else {
                 frases = [
-                    `¡Excelente, ${user.nombre}!`,
-                    "Empecemos con el primer juego.",
-                    "Ingresa a la Taquilla de Pepe."
+                    { texto: "¡Excelente!", audio: 'claw_guia_001' },
+                    { texto: "Empecemos con el primer juego.", audio: 'claw_guia_j1_001' },
+                    { texto: "Ingresa a la Taquilla de Pepe.", audio: 'claw_guia_j1_002' }
                 ];
             }
         } else {
             frases = [
-                "¡Bienvenido al Circo Isósceles!",
-                "Soy Mr. Claw, el dueño de este lugar.",
-                "Antes de empezar, ingresa a la carpa del perfil.",
-                "Si ingresas por primera vez, crea tu perfil.",
-                "Si ya tienes uno, inicia sesión."
+                { texto: "¡Bienvenido al Circo Isósceles!", audio: 'claw_bienvenida_001' },
+                { texto: "Soy Mister Claw, el dueño de este lugar.", audio: 'claw_bienvenida_002' },
+                { texto: "Antes de empezar, ingresa a la carpa del perfil.", audio: 'claw_bienvenida_003' },
+                { texto: "Si ingresas por primera vez, crea tu perfil.", audio: 'claw_bienvenida_004' },
+                { texto: "Si ya tienes uno, inicia sesión.", audio: 'claw_bienvenida_005' }
             ];
         }
         
         let paso = 0;
-        this.txtClaw.setText(frases[paso]);
-
-        window.TTSManager.speak(frases[paso], 'MrClaw');
+        this.txtClaw.setText(frases[paso].texto);
+        this.reproducirAudioTutor(frases[paso].audio);
 
         // Animación de hablar (un solo brinco)
         const darBrinco = () => {
@@ -268,13 +290,8 @@ class MenuScene extends Phaser.Scene {
         };
         darBrinco();
 
-        // Botón Saltar
-        const btnSaltar = this.add.text(615, 340, 'SALTAR >>', { 
-            fontFamily: 'Courier New', fontSize: '12px', fill: '#333', fontWeight: 'bold' 
-        }).setOrigin(1, 1).setInteractive({ useHandCursor: true });
-
         const finalizar = () => {
-            window.TTSManager.stop();
+            if (this.audioTutor) this.audioTutor.stop();
 
             // Detener animación de hablar
             if (this.tweenClaw) {
@@ -287,7 +304,6 @@ class MenuScene extends Phaser.Scene {
 
             this.nubeClaw.setVisible(false);
             this.txtClaw.setVisible(false);
-            btnSaltar.destroy();
             this.input.off('pointerdown', avanzar);
             this.tutorialActivo = false;
 
@@ -301,21 +317,16 @@ class MenuScene extends Phaser.Scene {
         };
 
         const avanzar = () => {
-            window.TTSManager.stop();
+            if (this.audioTutor) this.audioTutor.stop();
             paso++;
             if (paso < frases.length) {
-                this.txtClaw.setText(frases[paso]);
-                window.TTSManager.speak(frases[paso], 'MrClaw');
+                this.txtClaw.setText(frases[paso].texto);
+                this.reproducirAudioTutor(frases[paso].audio);
                 darBrinco();
             } else {
                 finalizar();
             }
         };
-
-        btnSaltar.on('pointerdown', (pointer, localX, localY, event) => {
-            event.stopPropagation();
-            finalizar();
-        });
 
         this.input.on('pointerdown', avanzar);
     }
@@ -326,6 +337,8 @@ class MenuScene extends Phaser.Scene {
 
         let jugados = JSON.parse(localStorage.getItem('juegosJugados')) || {};
         let userJugados = currentUser ? (jugados[currentUser.id] || []) : [];
+        let userSessions = JSON.parse(localStorage.getItem('userSessions')) || {};
+        let sessionCount = currentUser ? (userSessions[currentUser.id] || 1) : 1;
 
         // Ruta establecida
         const ordenJuegos = ['TaquillaScene', 'PoligonoScene', 'MagoScene', 'MiloScene', 'DagasScene'];
@@ -347,14 +360,35 @@ class MenuScene extends Phaser.Scene {
                 else break; // Frena en el primero que no haya completado
             }
         }
+        
+        if (currentUser && currentUser.username !== 'admin' && sessionCount < 2 && nivelActual >= 4) {
+            nivelActual = -1; // Detiene el avance hacia el juego final en la primera sesión
+        }
 
         // Configurar interactividad y visibilidad
         ordenJuegos.forEach((gameId, index) => {
-            if (index <= nivelActual) {
+            let isPlayed = userJugados.includes(gameId);
+            let isAdmin = currentUser && currentUser.username === 'admin';
+
+            if (index === nivelActual) {
+                // Siguiente juego a jugar
                 carpas[gameId].setInteractive({ useHandCursor: true });
                 carpas[gameId].setAlpha(1); // Juego activo (sin opacidad)
-                carteles[gameId].setAlpha(1); 
+                carteles[gameId].setAlpha(1);
+            } else if (isPlayed) {
+                if (isAdmin) {
+                    // Admin puede repetir
+                    carpas[gameId].setInteractive({ useHandCursor: true });
+                    carpas[gameId].setAlpha(1);
+                    carteles[gameId].setAlpha(1);
+                } else {
+                    // Usuario normal no puede repetir
+                    carpas[gameId].disableInteractive();
+                    carpas[gameId].setAlpha(0.8); // Juego ya completado (ligeramente opaco)
+                    carteles[gameId].setAlpha(0.8);
+                }
             } else {
+                // Juego bloqueado
                 carpas[gameId].disableInteractive();
                 carpas[gameId].setAlpha(0.5); // Juego inactivo (opaco)
                 carteles[gameId].setAlpha(0.5);
@@ -438,8 +472,8 @@ class MenuScene extends Phaser.Scene {
         loginContainer.innerHTML = `
             <div style="background-color: #3d2622; padding: 25px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.8); font-family: 'Courier New'; color: #fff; text-align: center; width: 320px; border: 2px solid #d4a373;">
                 <h2 style="margin-top:0; color: #d4a373;">Iniciar Sesión</h2>
-                <input type="text" id="login-user" placeholder="Nombre de usuario" style="width: 90%; padding: 10px; margin: 8px 0; border-radius: 5px; border: none; font-family: 'Courier New';"><br>
-                <input type="password" id="login-pass" placeholder="Contraseña" style="width: 90%; padding: 10px; margin: 8px 0; border-radius: 5px; border: none; font-family: 'Courier New';"><br>
+                <input type="text" id="login-user" placeholder="Nombre de usuario" maxlength="8" style="width: 90%; padding: 10px; margin: 8px 0; border-radius: 5px; border: none; font-family: 'Courier New';"><br>
+                <input type="password" id="login-pass" placeholder="Contraseña" maxlength="8" style="width: 90%; padding: 10px; margin: 8px 0; border-radius: 5px; border: none; font-family: 'Courier New';"><br>
                 <button id="btn-login" style="background: #4CAF50; color: white; font-weight: bold; border: none; padding: 12px; width: 95%; margin-top: 15px; cursor: pointer; border-radius: 5px;">Entrar a Jugar</button>
                 <p style="font-size: 13px; margin-top: 15px;">¿No tienes cuenta? Cierra esta ventana y selecciona 'Crear Perfil Nuevo'.</p>
                 <button id="btn-cerrar-login" style="background: #f44336; color: white; border: none; padding: 10px; width: 95%; cursor: pointer; border-radius: 5px;">Cerrar</button>
@@ -454,6 +488,11 @@ class MenuScene extends Phaser.Scene {
             let found = users.find(x => x.username === u && x.password === p);
             
             if (found) {
+                // Aumentar el contador de sesiones al iniciar sesión
+                let userSessions = JSON.parse(localStorage.getItem('userSessions')) || {};
+                userSessions[found.id] = (userSessions[found.id] || 0) + 1;
+                localStorage.setItem('userSessions', JSON.stringify(userSessions));
+
                 localStorage.setItem('currentUser', JSON.stringify(found));
                 loginContainer.remove();
                 this.activarJuegos();

@@ -165,7 +165,7 @@ window.LearningAgent = {
         return { prediction: stateCategory, reward: reward, qUpdate: qNew };
     },
 
-    logInteraction: function(userId, gameId, kc, action, isCorrect, inputVal, responseTime, pregunta, respuestaCorrecta) {
+    logInteraction: function(userId, gameId, kc, action, isCorrect, inputVal, responseTime, pregunta, respuestaCorrecta, numeroIntento) {
         let initialState = this.getKnowledgeState(userId, kc);
         
         // Heurística de "Muy fácil": Si responde correctamente en menos de 2.5 segundos
@@ -177,6 +177,7 @@ window.LearningAgent = {
         let logs = JSON.parse(localStorage.getItem('gameLogs')) || [];
         logs.push({
             userId, gameId, kc, 
+            numeroIntento: numeroIntento || 1,
             initialState: bktResult.prev, 
             tutorAction: action, 
             isCorrect, 
@@ -193,6 +194,31 @@ window.LearningAgent = {
         localStorage.setItem('gameLogs', JSON.stringify(logs));
     }
 };
+
+// Crear usuario admin especial si no existe
+let defaultUsers = JSON.parse(localStorage.getItem('gameUsers')) || [];
+let adminUser = defaultUsers.find(u => u.username === 'admin');
+
+if (!adminUser) {
+    adminUser = {
+        id: 'ADMIN_000',
+        nombre: 'Administrador',
+        apellido: '',
+        username: 'admin',
+        password: '123456',
+        sexo: 'otro',
+        imagen: 'assets/perfil/avatar_1.png',
+        edad: 99,
+        grado: 'Admin'
+    };
+    defaultUsers.push(adminUser);
+    localStorage.setItem('gameUsers', JSON.stringify(defaultUsers));
+}
+
+// Asegurar que el admin siempre tenga todos los juegos desbloqueados
+let allJugados = JSON.parse(localStorage.getItem('juegosJugados')) || {};
+allJugados[adminUser.id] = ['TaquillaScene', 'PoligonoScene', 'MagoScene', 'MiloScene', 'DagasScene'];
+localStorage.setItem('juegosJugados', JSON.stringify(allJugados));
 
 // Forzar que no haya sesión iniciada al recargar la página
 // Esto asegura que Mr. Claw siempre dé la bienvenida inicial

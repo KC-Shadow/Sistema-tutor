@@ -40,9 +40,22 @@ class DagasScene extends Phaser.Scene {
         this.load.audio('musica_dagas', 'assets/music/circus_game2.mp3');
 
         // Sonidos de los globos y resultados
-        this.load.audio('boom', 'assets/music/globo_boom.mp3');
+        this.load.audio('boom', 'assets/music/boom.mp3');
         this.load.audio('ganar', 'assets/music/win.mp3');
         this.load.audio('error', 'assets/music/error.mp3');
+        this.load.audio('aplausos', 'assets/music/aplausos.mp3');
+        this.load.audio('circus_end', 'assets/music/circus_end.mp3');
+        this.load.audio('fuegos_artificiales', 'assets/music/fuegos_artificiales.mp3');
+        this.load.image('fin_juego', 'assets/extra/fin_juego.png');
+
+        // Audios de tutor (Dante)
+        for (let i = 1; i <= 5; i++) {
+            this.load.audio(`dante_audio_00${i}`, `assets/audios_tutor/dante_audios/bienvenida/audio_00${i}.wav`);
+        }
+        for (let i = 1; i <= 5; i++) {
+            this.load.audio(`dante_ap_00${i}`, `assets/audios_tutor/dante_audios/afirmaciones/positivas/ap_00${i}.wav`);
+            this.load.audio(`dante_an_00${i}`, `assets/audios_tutor/dante_audios/afirmaciones/negativas/an_00${i}.wav`);
+        }
     }
 
     init() {
@@ -71,7 +84,7 @@ class DagasScene extends Phaser.Scene {
     create() {
         this.juegoActivo = false;
 
-        this.add.image(400, 300, 'fondo_dagas').setDisplaySize(800, 600);
+        this.fondo = this.add.image(400, 300, 'fondo_dagas').setDisplaySize(800, 600);
 
         // Musica de fondo (Volumen bajo inicial por el tutorial)
         this.musica = this.sound.add('musica_dagas', { loop: true, volume: 0.1 });
@@ -99,7 +112,7 @@ class DagasScene extends Phaser.Scene {
         }).setOrigin(0.5).setVisible(false);
 
         // Rondas
-        this.txtRondas = this.add.text(680, 90, 'RONDAS: 0/32', { fontFamily: 'Playbill', fontSize: '46px', fill: '#000000' }).setOrigin(0.5).setAngle(-9);
+        this.txtRondas = this.add.text(680, 90, `RONDAS: 0/${this.maxPreguntas}`, { fontFamily: 'Playbill', fontSize: '46px', fill: '#000000' }).setOrigin(0.5).setAngle(-9);
         
         // Mensajes de Ronda
         this.txtMensaje = this.add.text(680, 125, '', { fontFamily: 'Playbill', fontSize: '44px', fill: '#000000'}).setOrigin(0.5).setAngle(-9);
@@ -107,25 +120,31 @@ class DagasScene extends Phaser.Scene {
         // Marcador de Puntuación
         this.txtPuntuacion = this.add.text(680, 160, 'Puntos: 0', { fontFamily: 'Playbill', fontSize: '48px', fill: '#000000' }).setOrigin(0.5).setAngle(-9);
 
-        // Botón para volver al menú principal (esquina inferior derecha)
-        this.btnVolver = this.add.text(780, 580, 'Volver', { fontFamily: 'Courier New', fontSize: '18px', fill: '#fff', backgroundColor: '#3d2622', padding: { x: 10, y: 5 } }).setOrigin(1, 1).setInteractive({ useHandCursor: true });
-        this.btnVolver.on('pointerdown', () => {
-            this.sound.stopAll();
-            window.TTSManager.stop();
-            this.scene.start('MenuScene'); // Detiene DanteScene y vuelve al menú
-        });
-
         this.iniciarTutorial();
+    }
+
+    // Función de apoyo para reproducir audios de forma segura
+    reproducirAudioTutor(llaveAudio) {
+        if (this.audioTutor) {
+            this.audioTutor.stop();
+            this.audioTutor.destroy(); // Libera la memoria del audio anterior
+        }
+        if (this.cache.audio.exists(llaveAudio)) {
+            this.audioTutor = this.sound.add(llaveAudio, { volume: 1 });
+            this.audioTutor.play();
+        } else {
+            console.error(`🚨 ERROR: No se encontró o no se pudo cargar el audio '${llaveAudio}'. Revisa la ruta, el formato y la consola de red.`);
+        }
     }
 
     opacarJuego(opacar) {
         let alpha = opacar ? 0.3 : 1;
+        if (this.fondo) this.fondo.setAlpha(alpha);
         if (this.diana) this.diana.setAlpha(alpha);
         if (this.cartelera) this.cartelera.setAlpha(alpha);
         if (this.txtRondas) this.txtRondas.setAlpha(alpha);
         if (this.txtMensaje) this.txtMensaje.setAlpha(alpha);
         if (this.txtPuntuacion) this.txtPuntuacion.setAlpha(alpha);
-        if (this.btnVolver) this.btnVolver.setAlpha(alpha);
     }
 
     iniciarTutorial() {
@@ -137,17 +156,16 @@ class DagasScene extends Phaser.Scene {
         if (this.musica) this.musica.setVolume(0.1);
 
         const frases = [
-            "¡Hola! Soy Dante. Bienvenido al reto de 'Dagas en el Aire'.",
-            "Tu objetivo es reventar el globo que tenga la respuesta correcta.",
-            "Yo te mostraré una operación matemática, ¡calcula rápido!",
-            "Haz clic en el globo correcto para lanzar una daga.",
-            "Tendrás 32 rondas para conseguir la mayor puntuación posible."
+            { texto: "¡Hola! Soy Dante. Bienvenido al reto de 'Dagas en el Aire'.", audio: 'dante_audio_001' },
+            { texto: "Tu objetivo es reventar el globo que tenga la respuesta correcta.", audio: 'dante_audio_002' },
+            { texto: "Yo te mostraré una operación matemática, ¡calcula rápido!", audio: 'dante_audio_003' },
+            { texto: "Haz clic en el globo correcto para lanzar una daga.", audio: 'dante_audio_004' },
+            { texto: "Tendrás 24 rondas para conseguir la mayor puntuación posible.", audio: 'dante_audio_005' }
         ];
 
         let paso = 0;
-        this.txtTutorial.setText(frases[paso]);
-        
-        window.TTSManager.speak(frases[paso], 'Dante');
+        this.txtTutorial.setText(frases[paso].texto);
+        this.reproducirAudioTutor(frases[paso].audio);
 
         // Animación de hablar
         const darBrinco = () => {
@@ -161,14 +179,8 @@ class DagasScene extends Phaser.Scene {
         };
         darBrinco();
 
-        // Botón Saltar
-        const btnSaltar = this.add.text(400, 550, 'SALTAR >>', { 
-            fontFamily: 'Courier New', fontSize: '20px', fill: '#fff', backgroundColor: '#000', padding: 5 
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
         const finalizarTutorial = () => {
-            window.TTSManager.stop();
-            
+            if (this.audioTutor) this.audioTutor.stop();
             // Restaurar volumen de la música al finalizar tutorial
             if (this.musica) this.musica.setVolume(0.5);
 
@@ -179,7 +191,6 @@ class DagasScene extends Phaser.Scene {
             }
             
             this.input.off('pointerdown', avanzar);
-            btnSaltar.destroy();
             this.txtTutorial.setVisible(false);
             this.dialogo.setVisible(false); 
             this.opacarJuego(false);
@@ -187,21 +198,16 @@ class DagasScene extends Phaser.Scene {
         };
 
         const avanzar = () => {
-            window.TTSManager.stop();
+            if (this.audioTutor) this.audioTutor.stop();
             paso++;
             if (paso < frases.length) {
-                this.txtTutorial.setText(frases[paso]);
-                window.TTSManager.speak(frases[paso], 'Dante');
+                this.txtTutorial.setText(frases[paso].texto);
+                this.reproducirAudioTutor(frases[paso].audio);
                 darBrinco();
             } else {
                 finalizarTutorial();
             }
         };
-
-        btnSaltar.on('pointerdown', (pointer, localX, localY, event) => {
-            event.stopPropagation();
-            finalizarTutorial();
-        });
 
         this.input.on('pointerdown', avanzar);
     }
@@ -285,6 +291,7 @@ class DagasScene extends Phaser.Scene {
         this.operacionActual = { a, b, resultado, signo };
 
         // Dante indica la operación en su nube
+        this.txtOperacion.setStyle({ fontSize: '26px', fill: '#000', fontStyle: 'bold', align: 'center', wordWrap: { width: 180 } });
         this.dialogo.setVisible(true);
         this.txtOperacion.setText(`${a} ${signo} ${b} = ?`);
         this.txtOperacion.setVisible(true);
@@ -394,6 +401,8 @@ class DagasScene extends Phaser.Scene {
         if (!this.juegoActivo || !this.rondaActiva) return;
         this.rondaActiva = false; // Detener la lógica de la ronda inmediatamente
 
+        this.sound.play('boom'); // Suena el impacto primero
+
         // Recuperar el valor oculto del globo impactado
         let valorGlobo = globoImpactado.getData('valor');
         let esCorrecto = (valorGlobo === this.operacionActual.resultado);
@@ -408,17 +417,40 @@ class DagasScene extends Phaser.Scene {
             window.LearningAgent.logInteraction(
                 currentUser.id, 'DagasScene', kcActual, 'Dificultad_Adaptativa', 
                 esCorrecto, valorGlobo, timeElapsed,
-                `${this.operacionActual.a} ${this.operacionActual.signo} ${this.operacionActual.b}`, this.operacionActual.resultado
+                `${this.operacionActual.a} ${this.operacionActual.signo} ${this.operacionActual.b}`, this.operacionActual.resultado,
+                this.preguntasRealizadas
             );
         }
 
+        const frasesPositivas = [
+            { texto: '¡Excelente!', audio: 'dante_ap_001' },
+            { texto: '¡Eres muy inteligente!', audio: 'dante_ap_002' },
+            { texto: '¡Buen trabajo, campeón!', audio: 'dante_ap_003' },
+            { texto: '¡Buenísima esa, campeón!', audio: 'dante_ap_004' },
+            { texto: '¡Lo estás logrando!', audio: 'dante_ap_005' }
+        ];
+        const frasesNegativas = [
+            { texto: '¡Oh no, perdiste!', audio: 'dante_an_001' },
+            { texto: 'Inténtalo de nuevo', audio: 'dante_an_002' },
+            { texto: 'Esa no era', audio: 'dante_an_003' },
+            { texto: 'Casi lo logras', audio: 'dante_an_004' },
+            { texto: 'Casi, intenta otra vez', audio: 'dante_an_005' }
+        ];
+
+        if (this.audioTutor) this.audioTutor.stop();
+
+        this.dialogo.setVisible(true);
+        this.txtOperacion.setVisible(true);
+
         if (esCorrecto) { 
-            this.sound.play('ganar');
-            this.sound.play('boom');
+            this.time.delayedCall(300, () => this.sound.play('ganar', { volume: 0.3 }));
             this.puntuacion += 10; // Sumar puntos por acierto
             this.txtPuntuacion.setText(`Puntos: ${this.puntuacion}`);
-            this.txtMensaje.setText('¡CORRECTO!');
-            this.txtMensaje.setColor('#0f0'); // Verde brillante (Coherente con Pepe)
+            this.txtMensaje.setText(''); 
+            let frase = Phaser.Utils.Array.GetRandom(frasesPositivas);
+            this.txtOperacion.setText(frase.texto);
+            this.reproducirAudioTutor(frase.audio);
+            this.txtOperacion.setStyle({ fontSize: '18px', fill: 'rgb(21, 0, 255)', fontStyle: 'bold', align: 'center', wordWrap: { width: 180 } });
 
             // Guardar posición del globo antes de destruirlo
             const x = globoImpactado.x;
@@ -440,9 +472,12 @@ class DagasScene extends Phaser.Scene {
             this.time.delayedCall(1500, this.prepararSiguienteRonda, [], this);
         } else {
             // --- FALLO (Globo Incorrecto) ---
-            this.sound.play('error');
-            this.txtMensaje.setText('¡INCORRECTO!');
-            this.txtMensaje.setColor('#f00'); // Rojo
+            this.time.delayedCall(300, () => this.sound.play('error', { volume: 0.3 }));
+            this.txtMensaje.setText('');
+            let frase = Phaser.Utils.Array.GetRandom(frasesNegativas);
+            this.txtOperacion.setText(frase.texto);
+            this.reproducirAudioTutor(frase.audio);
+            this.txtOperacion.setStyle({ fontSize: '18px', fill: '#f00', fontStyle: 'bold', align: 'center', wordWrap: { width: 180 } });
 
             // Efecto visual: El globo se oscurece y la cámara vibra
             globoImpactado.setTint(0x444444); 
@@ -466,6 +501,10 @@ class DagasScene extends Phaser.Scene {
         this.juegoActivo = false;
         window.TTSManager.stop();
 
+        this.sound.stopAll();
+        this.sound.play('circus_end', { volume: 0.5 });
+        this.sound.play('fuegos_artificiales', { volume: 0.5 });
+
         // Ocultar elementos de juego
         this.dialogo.setVisible(false);
         this.txtOperacion.setVisible(false);
@@ -474,20 +513,8 @@ class DagasScene extends Phaser.Scene {
         this.txtRondas.setVisible(false);
 
         // Pantalla de fin de juego
-        this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
-        this.add.text(400, 250, '¡FIN DEL JUEGO!', { fontFamily: 'Courier New', fontSize: '56px', fill: '#f00', fontStyle: 'bold' }).setOrigin(0.5);
-        this.add.text(400, 350, `Puntuación Final: ${this.puntuacion}`, { fontFamily: 'Courier New', fontSize: '32px', fill: '#d4a373' }).setOrigin(0.5);
+        this.add.image(400, 300, 'fin_juego').setDisplaySize(800, 600).setDepth(100);
+        this.add.text(400, 550, `Puntuación Final: ${this.puntuacion}`, { fontFamily: 'Courier New', fontSize: '32px', fill: '#fff', backgroundColor: '#000', padding: 5 }).setOrigin(0.5).setDepth(101);
 
-        this.btnVolver.setVisible(false);
-        
-        const btnVolverMenu = this.add.text(400, 480, 'Volver al Menú', { 
-            fontFamily: 'Courier New', fontSize: '24px', fill: '#fff', backgroundColor: '#3d2622', padding: 10 
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        btnVolverMenu.on('pointerdown', () => {
-            this.sound.stopAll();
-            window.TTSManager.stop();
-            this.scene.start('MenuScene');
-        });
     }
 }

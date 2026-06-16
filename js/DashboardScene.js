@@ -41,27 +41,44 @@ class DashboardScene extends Phaser.Scene {
 
     descargarJSONDatos() {
         const gameLogs = JSON.parse(localStorage.getItem('gameLogs')) || [];
+        const allUsers = JSON.parse(localStorage.getItem('gameUsers')) || [];
+
+        // Identificar y excluir al admin de los datos a exportar
+        const adminIds = allUsers.filter(u => u.username === 'admin' || u.id === 'ADMIN_000').map(u => u.id);
+        const usuariosExportados = allUsers.filter(u => !adminIds.includes(u.id));
+        const logsExportados = gameLogs.filter(l => !adminIds.includes(l.userId));
         
         // Mapear métricas para que el JSON exportado tenga exactamente los campos y orden solicitados
-        const metricasExportadas = gameLogs.map(l => ({
+        const metricasExportadas = logsExportados.map(l => ({
             userId: l.userId,
             gameId: l.gameId,
             kc: l.kc,
-            "numero de intento": l["numero de intento"] || 1,
+            numeroIntento: l.numeroIntento || l["numero de intento"] || 1,
             isCorrect: l.isCorrect,
             input: l.input,
-            pregunta: l.pregunta,
-            "respuesta correcta": l["respuesta correcta"] !== undefined ? l["respuesta correcta"] : l.respuestaCorrecta,
+            pregunta: l.pregunta || 'N/A',
+            respuestaCorrecta: l.respuestaCorrecta !== undefined ? l.respuestaCorrecta : (l["respuesta correcta"] !== undefined ? l["respuesta correcta"] : 'N/A'),
             responseTime: l.responseTime,
             timestamp: l.timestamp
         }));
 
+        // Obtener el resto de los datos y limpiar registros del admin
+        let bktState = JSON.parse(localStorage.getItem('bktState')) || {};
+        let qTable = JSON.parse(localStorage.getItem('qTable')) || {};
+        let juegosJugados = JSON.parse(localStorage.getItem('juegosJugados')) || {};
+
+        adminIds.forEach(id => {
+            delete bktState[id];
+            delete qTable[id];
+            delete juegosJugados[id];
+        });
+
         const data = {
-            usuarios: JSON.parse(localStorage.getItem('gameUsers')) || [],
+            usuarios: usuariosExportados,
             metricas: metricasExportadas,
-            bktState: JSON.parse(localStorage.getItem('bktState')) || {},
-            qTable: JSON.parse(localStorage.getItem('qTable')) || {},
-            juegosJugados: JSON.parse(localStorage.getItem('juegosJugados')) || {}
+            bktState: bktState,
+            qTable: qTable,
+            juegosJugados: juegosJugados
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -72,10 +89,91 @@ class DashboardScene extends Phaser.Scene {
         URL.revokeObjectURL(url);
     }
 
+    generateGradeComparisonChart() {
+        let users = JSON.parse(localStorage.getItem('gameUsers')) || [];
+        let logs = JSON.parse(localStorage.getItem('gameLogs')) || [];
+
+        let components = ["Suma", "Resta", "Multiplicación", "División"];
+        
+        // Función para normalizar el nombre del KC en 4 categorías principales
+        let normalizeKC = (kc) => {
+            if (!kc) return "Otro";
+            let k = kc.toLowerCase();
+            if (k.includes("suma")) return "Suma";
+            if (k.includes("resta")) return "Resta";
+            if (k.includes("multiplic")) return "Multiplicación";
+            if (k.includes("divisi")) return "División";
+            return "Otro";
+        };
+
+        let stats = {
+            "5to A": { "Suma": {c:0, t:0}, "Resta": {c:0, t:0}, "Multiplicación": {c:0, t:0}, "División": {c:0, t:0} },
+            "5to B": { "Suma": {c:0, t:0}, "Resta": {c:0, t:0}, "Multiplicación": {c:0, t:0}, "División": {c:0, t:0} },
+            "6to Unica": { "Suma": {c:0, t:0}, "Resta": {c:0, t:0}, "Multiplicación": {c:0, t:0}, "División": {c:0, t:0} }
+        };
+
+        // Procesar todos los logs y clasificarlos por grado y componente
+        logs.forEach(log => {
+            let user = users.find(u => u.id === log.userId);
+            if (!user) return;
+            
+            let grade = null;
+            if (user.grado === "5to A" || user.grado === "5to") grade = "5to A"; // "5to" como fallback de registros antiguos
+            else if (user.grado === "5to B") grade = "5to B";
+            else if (user.grado === "6to Unica" || user.grado === "6to") grade = "6to Unica";
+
+            if (!grade) return;
+
+            let comp = normalizeKC(log.kc);
+            if (stats[grade] && stats[grade][comp]) {
+                stats[grade][comp].t++;
+                if (log.isCorrect) stats[grade][comp].c++;
+            }
+        });
+
+        // Construir la interfaz de la gráfica comparativa
+        let html = `<div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+            <h2 style="margin-top: 0; margin-bottom: 20px; color: #d4a373;">Comparativa de Rendimiento por Grado</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">`;
+
+        let colors = { "5to A": "#4CAF50", "5to B": "#2196F3", "6to Unica": "#FF9800" };
+
+        components.forEach(comp => {
+            html += `<div style="background: #333; padding: 15px; border-radius: 8px;">
+                <h3 style="text-align: center; margin-top: 0; border-bottom: 1px solid #555; padding-bottom: 10px;">${comp}</h3>`;
+            
+            Object.keys(stats).forEach(grade => {
+                let data = stats[grade][comp];
+                let pct = data.t > 0 ? Math.round((data.c / data.t) * 100) : 0;
+                let color = colors[grade];
+                
+                html += `
+                    <div style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px;">
+                            <span>${grade}</span>
+                            <span title="${data.c} aciertos de ${data.t} intentos">${pct}%</span>
+                        </div>
+                        <div style="width: 100%; background: #555; border-radius: 4px; height: 12px; overflow: hidden;">
+                            <div style="width: ${pct}%; background: ${color}; height: 100%;"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        });
+
+        html += `</div></div>`;
+        return html;
+    }
+
     renderUserList() {
         let users = JSON.parse(localStorage.getItem('gameUsers')) || [];
         
+        // Excluir al admin de la lista visual del Dashboard
+        users = users.filter(u => u.username !== 'admin' && u.id !== 'ADMIN_000');
+
         let html = this.getNavbarHTML() + `
+            ${this.generateGradeComparisonChart()}
             <h2>Estudiantes Registrados</h2>
             <div style="display: flex; flex-wrap: wrap; gap: 20px;">
         `;
@@ -235,7 +333,7 @@ class DashboardScene extends Phaser.Scene {
                     <tbody>${userLogs.map(l => `<tr style="border-bottom: 1px solid #444;">
                         <td style="padding: 8px;">${l.gameId}</td>
                         <td style="padding: 8px;">${l.kc}</td>
-                        <td style="padding: 8px;">${l["numero de intento"] || 1}</td>
+                        <td style="padding: 8px;">${l.numeroIntento || l["numero de intento"] || 1}</td>
                         <td style="padding: 8px; font-weight: bold; color: ${l.isCorrect ? '#4CAF50' : '#F44336'}">${l.isCorrect ? 'Correcto' : 'Incorrecto'}</td>
                         <td style="padding: 8px;">${l.input}</td>
                         <td style="padding: 8px;">${l.pregunta || 'N/A'}</td>

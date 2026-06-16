@@ -42,8 +42,6 @@ class PerfilScene extends Phaser.Scene {
                 #perfil-form input, #perfil-form select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
                 #perfil-form input[type="submit"] { background-color: #4CAF50; color: white; border: none; padding: 10px; margin-top: 20px; width: 100%; cursor: pointer; border-radius: 4px; font-size: 16px; }
                 #perfil-form input[type="submit"]:hover { background-color: #45a049; }
-                #btn-volver { background-color: #f44336; color: white; border: none; padding: 10px; margin-top: 10px; width: 100%; cursor: pointer; border-radius: 4px; font-size: 16px; }
-                #btn-volver:hover { background-color: #d32f2f; }
                 /* Estilos para selección de avatar */
                 .avatar-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
                 .avatar-option { cursor: pointer; }
@@ -64,13 +62,13 @@ class PerfilScene extends Phaser.Scene {
                 </div>
 
                 <label for="nombre">Nombre:</label>
-                <input type="text" id="nombre" name="nombre" required>
+                <input type="text" id="nombre" name="nombre" pattern="[a-zA-ZÁÉÍÓÚáéíóúÑñÜü ]+" title="Solo se permiten letras" required>
                 <label for="apellido">Apellido:</label>
-                <input type="text" id="apellido" name="apellido" required>
+                <input type="text" id="apellido" name="apellido" pattern="[a-zA-ZÁÉÍÓÚáéíóúÑñÜü ]+" title="Solo se permiten letras" required>
                 <label for="username">Nombre de Usuario (Login):</label>
-                <input type="text" id="username" name="username" required>
+                <input type="text" id="username" name="username" maxlength="8" required>
                 <label for="password">Contraseña (Login):</label>
-                <input type="password" id="password" name="password" required>
+                <input type="password" id="password" name="password" maxlength="8" required>
                 <label for="sexo">Sexo:</label>
                 <select id="sexo" name="sexo">
                     <option value="masculino">Masculino</option>
@@ -79,15 +77,15 @@ class PerfilScene extends Phaser.Scene {
                 </select>
                 
                 <label for="edad">Edad:</label>
-                <input type="number" id="edad" name="edad" required>
+                <input type="number" id="edad" name="edad" min="9" max="13" required>
                 <label for="grado">Grado Escolar:</label>
                 <select id="grado" name="grado" required>
-                    <option value="5to">5to</option>
-                    <option value="6to">6to</option>
+                    <option value="5to A">5to Sección A</option>
+                    <option value="5to B">5to Sección B</option>
+                    <option value="6to Unica">6to Sección Única</option>
                 </select>
                 
                 <input type="submit" value="Guardar y Salir">
-                <button type="button" id="btn-volver">Volver al Menú</button>
             </form>
         `;
         perfilContainer.innerHTML = formHTML;
@@ -99,15 +97,43 @@ class PerfilScene extends Phaser.Scene {
             event.preventDefault();
             // Lógica para guardar la información del perfil
             const formData = new FormData(form);
+            
+            const nombre = formData.get('nombre').trim();
+            const apellido = formData.get('apellido').trim();
+            const username = formData.get('username').trim();
+            const password = formData.get('password').trim();
+            const edad = parseInt(formData.get('edad'), 10);
+
+            // Validaciones adicionales por JavaScript por seguridad
+            const regexLetras = /^[a-zA-ZÁÉÍÓÚáéíóúÑñÜü\s]+$/;
+            if (!regexLetras.test(nombre) || !regexLetras.test(apellido)) {
+                alert("Los nombres y apellidos solo pueden contener letras.");
+                return;
+            }
+            if (username.length > 8 || password.length > 8) {
+                alert("El usuario y la contraseña deben tener un máximo de 8 caracteres.");
+                return;
+            }
+            if (edad < 9 || edad > 13) {
+                alert("La edad debe estar comprendida entre 9 y 13 años.");
+                return;
+            }
+            
+            const usernameLower = username.toLowerCase();
+            if (usernameLower.includes('admin') || usernameLower.includes('administrador')) {
+                alert("El nombre de usuario no está permitido. Por favor, elige otro.");
+                return;
+            }
+
             const perfilData = {
                 id: 'STU_' + Math.floor(Math.random() * 100000), // Generar ID automático
-                nombre: formData.get('nombre'),
-                apellido: formData.get('apellido'),
-                username: formData.get('username'),
-                password: formData.get('password'),
+                nombre: nombre,
+                apellido: apellido,
+                username: username,
+                password: password,
                 sexo: formData.get('sexo'),
                 imagen: formData.get('imagen'),
-                edad: formData.get('edad'),
+                edad: edad,
                 grado: formData.get('grado')
             };
             console.log('Información del perfil guardada:', perfilData);
@@ -118,13 +144,12 @@ class PerfilScene extends Phaser.Scene {
             localStorage.setItem('gameUsers', JSON.stringify(users));
             localStorage.setItem('currentUser', JSON.stringify(perfilData));
 
-            // Ocultar el formulario y volver al menú principal
-            perfilContainer.remove();
-            this.scene.start('MenuScene');
-        });
+            // Iniciar conteo de sesiones (Primera sesión al registrarse)
+            let userSessions = JSON.parse(localStorage.getItem('userSessions')) || {};
+            userSessions[perfilData.id] = 1;
+            localStorage.setItem('userSessions', JSON.stringify(userSessions));
 
-        // Botón para volver al menú principal sin guardar (HTML)
-        document.getElementById('btn-volver').addEventListener('click', () => {
+            // Ocultar el formulario y volver al menú principal
             perfilContainer.remove();
             this.scene.start('MenuScene');
         });
