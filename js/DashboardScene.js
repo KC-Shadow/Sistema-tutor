@@ -166,20 +166,59 @@ class DashboardScene extends Phaser.Scene {
         return html;
     }
 
-    renderUserList() {
-        let users = JSON.parse(localStorage.getItem('gameUsers')) || [];
+   renderUserList() {
+        let allUsers = JSON.parse(localStorage.getItem('gameUsers')) || []; //
         
-        // Excluir al admin de la lista visual del Dashboard
-        users = users.filter(u => u.username !== 'admin' && u.id !== 'ADMIN_000');
+        // Excluir al admin de la lista visual y de los contadores del Dashboard
+        let users = allUsers.filter(u => u.username !== 'admin' && u.id !== 'ADMIN_000'); //
 
+        // === NUEVA LÓGICA DE CONTADORES POR GRADO ===
+        let contadores = {
+            "5to A": 0,
+            "5to B": 0,
+            "6to Unica": 0,
+            "Total": users.length
+        };
+
+        // Procesar y contar cada estudiante según su grado escolar registrado
+        users.forEach(u => {
+            if (u.grado === "5to A") contadores["5to A"]++;
+            else if (u.grado === "5to B") contadores["5to B"]++;
+            else if (u.grado === "6to Unica") contadores["6to Unica"]++;
+        });
+
+        // Crear los bloques de HTML para los contadores rápidos
+        let contadoresHTML = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                <div style="background: #333; padding: 15px; border-radius: 8px; text-align: center; border-left: 5px solid #4CAF50; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                    <h4 style="margin: 0; color: #aaa; font-size: 14px;">5to grado "A"</h4>
+                    <p style="margin: 5px 0 0 0; font-size: 28px; font-weight: bold; color: #fff;">${contadores["5to A"]}</p>
+                </div>
+                <div style="background: #333; padding: 15px; border-radius: 8px; text-align: center; border-left: 5px solid #2196F3; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                    <h4 style="margin: 0; color: #aaa; font-size: 14px;">5to grado "B"</h4>
+                    <p style="margin: 5px 0 0 0; font-size: 28px; font-weight: bold; color: #fff;">${contadores["5to B"]}</p>
+                </div>
+                <div style="background: #333; padding: 15px; border-radius: 8px; text-align: center; border-left: 5px solid #FF9800; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                    <h4 style="margin: 0; color: #aaa; font-size: 14px;">6to grado "U"</h4>
+                    <p style="margin: 5px 0 0 0; font-size: 28px; font-weight: bold; color: #fff;">${contadores["6to Unica"]}</p>
+                </div>
+                <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; text-align: center; border: 1px dashed #d4a373; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                    <h4 style="margin: 0; color: #d4a373; font-size: 14px;">Total Estudiantes</h4>
+                    <p style="margin: 5px 0 0 0; font-size: 28px; font-weight: bold; color: #d4a373;">${contadores["Total"]}</p>
+                </div>
+            </div>
+        `;
+
+        // Construir el HTML completo inyectando la barra de navegación, los contadores, la gráfica y la lista
         let html = this.getNavbarHTML() + `
+            ${contadoresHTML}
             ${this.generateGradeComparisonChart()}
             <h2>Estudiantes Registrados</h2>
             <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-        `;
+        `; //
 
         if (users.length === 0) {
-            html += `<p>No hay estudiantes registrados en el sistema.</p>`;
+            html += `<p>No hay estudiantes registrados en el sistema.</p>`; //
         } else {
             users.forEach(u => {
                 html += `
@@ -190,33 +229,32 @@ class DashboardScene extends Phaser.Scene {
                         <p style="margin: 2px 0; font-size: 14px; text-align: center;">Edad: ${u.edad} | Grado: ${u.grado || 'N/A'}</p>
                         <p style="margin: 2px 0; font-size: 12px; text-align: center; color: #aaa;">Usuario: ${u.username}</p>
                     </div>
-                `;
+                `; //
             });
         }
-        html += `</div>`;
-        this.dashContainer.innerHTML = html;
+        html += `</div>`; //
+        this.dashContainer.innerHTML = html; //
 
-        this.attachNavbarEvents();
+        this.attachNavbarEvents(); //
 
-        const cards = this.dashContainer.querySelectorAll('.user-card');
+        const cards = this.dashContainer.querySelectorAll('.user-card'); //
         cards.forEach(card => {
-            card.addEventListener('mouseenter', () => card.style.transform = 'scale(1.05)');
-            card.addEventListener('mouseleave', () => card.style.transform = 'scale(1)');
+            card.addEventListener('mouseenter', () => card.style.transform = 'scale(1.05)'); //
+            card.addEventListener('mouseleave', () => card.style.transform = 'scale(1)'); //
             card.addEventListener('click', (e) => {
-                // Solo entramos a las métricas si NO se hizo clic en el botón de eliminar
                 if (!e.target.classList.contains('btn-delete-user')) {
-                    this.renderUserMetrics(card.getAttribute('data-id'));
+                    this.renderUserMetrics(card.getAttribute('data-id')); //
                 }
             });
         });
 
-        const deleteBtns = this.dashContainer.querySelectorAll('.btn-delete-user');
+        const deleteBtns = this.dashContainer.querySelectorAll('.btn-delete-user'); //
         deleteBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Evita que se abra la pantalla de métricas
-                const userId = btn.getAttribute('data-id');
+                e.stopPropagation(); //
+                const userId = btn.getAttribute('data-id'); //
                 if (confirm('¿Estás seguro de que deseas eliminar a este estudiante? Se borrarán todos sus datos y métricas permanentemente.')) {
-                    this.deleteUser(userId);
+                    this.deleteUser(userId); //
                 }
             });
         });
