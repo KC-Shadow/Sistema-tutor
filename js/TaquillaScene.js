@@ -114,8 +114,8 @@ class TaquillaScene extends Phaser.Scene {
         }).setAlpha(0);
 
         // Tutorial y Diálogo
-        this.nube = this.add.image(50, 150, 'dialogo').setOrigin(0, 0);
-        this.txtPepe = this.add.text(80, 190, '', { 
+        this.nube = this.add.image(90, 180, 'dialogo').setOrigin(0, 0); // 5% derecha (40px), 5% abajo (30px)
+        this.txtPepe = this.add.text(120, 220, '', { // Ajustado a la nueva posición de la nube
             fontFamily: 'Courier New', fontSize: '18px', fill: '#000', wordWrap: { width: 230 } 
         });
 
@@ -151,7 +151,7 @@ class TaquillaScene extends Phaser.Scene {
     }
 
     opacarJuego(opacar) {
-        let alpha = opacar ? 0.3 : 1;
+        let alpha = 1; // Se mantiene siempre visible
         if (this.fondo) this.fondo.setAlpha(alpha);
         if (this.cartelera_2) this.cartelera_2.setAlpha(alpha);
         if (this.cartelera) this.cartelera.setAlpha(alpha);

@@ -138,7 +138,7 @@ class DagasScene extends Phaser.Scene {
     }
 
     opacarJuego(opacar) {
-        let alpha = opacar ? 0.3 : 1;
+        let alpha = 1; // Se mantiene siempre visible
         if (this.fondo) this.fondo.setAlpha(alpha);
         if (this.diana) this.diana.setAlpha(alpha);
         if (this.cartelera) this.cartelera.setAlpha(alpha);

@@ -369,14 +369,15 @@ class MenuScene extends Phaser.Scene {
         ordenJuegos.forEach((gameId, index) => {
             let isPlayed = userJugados.includes(gameId);
             let isAdmin = currentUser && currentUser.username === 'admin';
+            let puedeRepetir = isAdmin || sessionCount >= 3;
 
             if (index === nivelActual) {
                 // Siguiente juego a jugar
                 carpas[gameId].setInteractive({ useHandCursor: true });
                 carpas[gameId].setAlpha(1); // Juego activo (sin opacidad)
                 carteles[gameId].setAlpha(1);
-            } else if (isPlayed) {
-                if (isAdmin) {
+            } else if (isPlayed) { // Si el juego ya fue jugado
+                if (puedeRepetir) {
                     // Admin puede repetir
                     carpas[gameId].setInteractive({ useHandCursor: true });
                     carpas[gameId].setAlpha(1);

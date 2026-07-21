@@ -96,7 +96,7 @@ class MagoScene extends Phaser.Scene {
     }
 
     opacarJuego(opacar) {
-        let alpha = opacar ? 0.3 : 1;
+        let alpha = 1; // Se mantiene siempre visible
         if (this.fondo) this.fondo.setAlpha(alpha);
         if (this.cartelera_z) this.cartelera_z.setAlpha(alpha);
         if (this.txtRondas) this.txtRondas.setAlpha(alpha);
